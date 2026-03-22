@@ -320,7 +320,7 @@
 </div>
 
 <script>
-const API_BASE = '/api';
+const API_BASE = 'https://acerto-api.onrender.com/api';
 
 async function apiFetch(path) {
   const res = await fetch(API_BASE + path, { credentials: 'include', headers: { 'Content-Type': 'application/json' } });

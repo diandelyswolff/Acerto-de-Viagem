@@ -1,10 +1,11 @@
-if (process.env.NODE_ENV !== 'production') require('dotenv').config();
+require('dotenv').config();
 const express  = require('express');
 const path     = require('path');
 const { Pool } = require('pg');
 const cors     = require('cors');
 const bcrypt   = require('bcrypt');
-const session  = require('express-session');
+const session     = require('express-session');
+const pgSession   = require('connect-pg-simple')(session);
 // fetch nativo disponível no Node 18+; para versões anteriores instale node-fetch
 const fetch = globalThis.fetch ?? require('node-fetch');
 
@@ -33,15 +34,20 @@ app.use(cors({
 app.options('/{*path}', cors());
 app.use(express.json({ limit: '20mb' }));
 
-// Sessão httpOnly — cookie seguro, não acessível por JS no browser
+// Sessão persistida no Neon — sobrevive a reinicializações do Render
 app.use(session({
+  store: new pgSession({
+    conString: process.env.DATABASE_URL,
+    tableName: 'session',
+    createTableIfMissing: true,
+  }),
   secret:            process.env.SESSION_SECRET || 'acerto-secret-dev',
   resave:            false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure:   true,       // HTTPS obrigatório em produção
-    sameSite: 'none',     // Necessário para cross-origin (GitHub Pages → Render)
+    secure:   true,
+    sameSite: 'none',
     maxAge:   8 * 60 * 60 * 1000,
   },
 }));

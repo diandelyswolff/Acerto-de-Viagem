@@ -16,8 +16,12 @@ const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost:3000')
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Permite requisições sem origin (ex: Postman, curl) e origins cadastradas
-    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) return cb(null, true);
+    // Permite: sem origin (same-origin/Postman), origins cadastradas, e o próprio Render
+    if (!origin) return cb(null, true);
+    const renderUrl = process.env.RENDER_EXTERNAL_URL || '';
+    if (allowedOrigins.some(o => origin.startsWith(o)) || (renderUrl && origin.startsWith(renderUrl))) {
+      return cb(null, true);
+    }
     cb(new Error('CORS: origem não permitida — ' + origin));
   },
   credentials: true,

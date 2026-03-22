@@ -4,8 +4,7 @@ const path     = require('path');
 const { Pool } = require('pg');
 const cors     = require('cors');
 const bcrypt   = require('bcrypt');
-const session     = require('express-session');
-const pgSession   = require('connect-pg-simple')(session);
+const jwt = require('jsonwebtoken');
 // fetch nativo disponível no Node 18+; para versões anteriores instale node-fetch
 const fetch = globalThis.fetch ?? require('node-fetch');
 
@@ -25,43 +24,36 @@ app.use(cors({
     }
     cb(new Error('CORS: origem não permitida — ' + origin));
   },
-  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Responde preflights explicitamente (necessário para cookies cross-origin)
-app.options('/{*path}', cors());
 app.use(express.json({ limit: '20mb' }));
 
-// Sessão persistida no Neon — sobrevive a reinicializações do Render
-app.use(session({
-  store: new pgSession({
-    conString: process.env.DATABASE_URL,
-    tableName: 'session',
-    createTableIfMissing: true,
-  }),
-  secret:            process.env.SESSION_SECRET || 'acerto-secret-dev',
-  resave:            false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure:   true,
-    sameSite: 'none',
-    maxAge:   8 * 60 * 60 * 1000,
-  },
-}));
+// ─── Middleware de autenticação JWT ──────────────────────────────────────────
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'acerto-secret-dev';
 
-// ─── Middleware de autenticação ───────────────────────────────────────────────
 function requireAuth(req, res, next) {
-  if (!req.session?.usuario) return res.status(401).json({ error: 'Não autenticado.' });
-  next();
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Não autenticado.' });
+  try {
+    req.usuario = jwt.verify(auth.slice(7), JWT_SECRET);
+    next();
+  } catch (e) {
+    res.status(401).json({ error: 'Token inválido ou expirado.' });
+  }
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.session?.usuario) return res.status(401).json({ error: 'Não autenticado.' });
-  if (req.session.usuario.role !== 'admin') return res.status(403).json({ error: 'Acesso restrito a administradores.' });
-  next();
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Não autenticado.' });
+  try {
+    req.usuario = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (req.usuario.role !== 'admin') return res.status(403).json({ error: 'Acesso restrito a administradores.' });
+    next();
+  } catch (e) {
+    res.status(401).json({ error: 'Token inválido ou expirado.' });
+  }
 }
 
 const pool = new Pool(
@@ -521,23 +513,33 @@ app.post('/api/auth/login', async (req, res) => {
     if (!usuario.senha_hash) return res.status(401).json({ error: 'Usuário sem senha cadastrada. Contate o administrador.' });
     const ok = await bcrypt.compare(senha, usuario.senha_hash);
     if (!ok) return res.status(401).json({ error: 'Senha incorreta.' });
-    req.session.usuario = { id: usuario.id, nome: usuario.nome, role: usuario.role };
-    res.json({ nome: usuario.nome, role: usuario.role });
+    const token = jwt.sign(
+      { id: usuario.id, nome: usuario.nome, role: usuario.role },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+    res.json({ token, nome: usuario.nome, role: usuario.role });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Logout
+// Logout — JWT é stateless, o cliente apenas descarta o token
 app.post('/api/auth/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
+  res.json({ ok: true });
 });
 
-// Retorna sessão atual (usado pelas páginas ao carregar)
+// Valida token e retorna dados do usuário (usado pelas páginas ao carregar)
 app.get('/api/auth/me', (req, res) => {
-  if (!req.session?.usuario) return res.status(401).json({ error: 'Não autenticado.' });
-  res.json(req.session.usuario);
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Não autenticado.' });
+  try {
+    const usuario = jwt.verify(auth.slice(7), JWT_SECRET);
+    res.json({ id: usuario.id, nome: usuario.nome, role: usuario.role });
+  } catch (e) {
+    res.status(401).json({ error: 'Token inválido ou expirado.' });
+  }
 });
 
 // Serve os HTMLs estáticos da pasta public/

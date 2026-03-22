@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <title>Dashboard — Acerto de Viagem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #eef1f6; --card: #ffffff; --border: #dde2ea;
+      --accent: #1a56db; --accent-dark: #1648c0; --accent-light: #eff4ff;
+      --text: #1b2537; --muted: #5f738f; --error: #c8000a;
+      --pix-bg: #fef9c3; --pix-fg: #92400e;
+      --corp-bg: #dbeafe; --corp-fg: #1e3a7a;
+      --total-bg: #dcfce7; --total-fg: #14803c;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 2.5rem 3rem; }
+
+    .page { width: 100%; display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 1rem; align-self: start; }
+
+    .search-card {
+      background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
+      border-radius: 18px; padding: 1.5rem 1.75rem 1.75rem;
+      display: flex; flex-direction: column; gap: 1rem;
+      box-shadow: 0 4px 24px rgba(26,86,219,0.22);
+    }
+    .search-header-row { display: flex; align-items: center; gap: 0.85rem; }
+    .search-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .search-texts h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .search-texts p  { color: rgba(255,255,255,0.68); font-size: 0.76rem; margin-top: 0.15rem; }
+
+    .id-row { display: flex; gap: 0.5rem; }
+    .search-input {
+      flex: 1; border: 2px solid rgba(255,255,255,0.3); border-radius: 9999px;
+      padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      background: rgba(255,255,255,0.14); color: #fff; outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .search-input::placeholder { color: rgba(255,255,255,0.5); font-weight: 400; }
+    .search-input:focus { border-color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.2); }
+    .btn-buscar {
+      background: #fff; color: var(--accent); border: none;
+      padding: 0.6rem 0.85rem; border-radius: 9999px;
+      font-size: 0.85rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      display: flex; align-items: center;
+    }
+    .btn-buscar:hover { background: #f0f5ff; transform: translateY(-1px); }
+
+    .btn-filtros {
+      background: rgba(255,255,255,0.12); color: #fff; border: 1.5px solid rgba(255,255,255,0.25);
+      padding: 0.55rem 1rem; border-radius: 9999px;
+      font-size: 0.8rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+      transition: background 0.15s; width: 100%; justify-content: center;
+    }
+    .btn-filtros:hover { background: rgba(255,255,255,0.2); }
+    .btn-filtros.active { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
+    .filtros-badge { background: #fff; color: var(--accent); font-size: 0.62rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 9999px; display: none; }
+    .filtros-badge.visible { display: inline-block; }
+
+    .filtros-panel { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .filtros-panel.open { max-height: 900px; }
+    .filtros-inner { display: flex; flex-direction: column; gap: 0.65rem; padding-top: 0.5rem; }
+    .f-field { display: flex; flex-direction: column; gap: 0.25rem; }
+    .f-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(255,255,255,0.65); }
+    .f-input, .f-select {
+      border: 1.5px solid rgba(255,255,255,0.25); border-radius: 8px;
+      padding: 0.5rem 0.75rem; font-size: 0.82rem;
+      font-family: 'DM Sans', sans-serif;
+      background: rgba(255,255,255,0.12); color: #fff; outline: none;
+      transition: border-color 0.15s; width: 100%;
+    }
+    .f-input::placeholder { color: rgba(255,255,255,0.4); }
+    .f-input:focus, .f-select:focus { border-color: rgba(255,255,255,0.7); }
+    .f-select option { background: #1a40a8; color: #fff; }
+    .f-date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .btn-aplicar { background: #fff; color: var(--accent); border: none; padding: 0.6rem; border-radius: 8px; font-size: 0.82rem; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
+    .btn-aplicar:hover { background: #f0f5ff; }
+    .btn-limpar-filtros { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; text-align: center; padding: 0.25rem 0; }
+    .btn-limpar-filtros:hover { color: #fff; }
+
+    /* ── RECENTES ── */
+    .recentes-card { background: var(--card); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .recentes-header { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--border); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+    .recentes-count { background: var(--accent-light); color: var(--accent); font-size: 0.62rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 9999px; }
+    .recentes-list { overflow-y: auto; flex: 1; min-height: 0; }
+    .recente-item { padding: 0.65rem 1.1rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+    .recente-item:last-child { border-bottom: none; }
+    .recente-item:hover { background: var(--accent-light); }
+    .recente-item.selected { background: var(--accent-light); border-left: 3px solid var(--accent); padding-left: calc(1.1rem - 3px); }
+    .recente-id { font-size: 0.68rem; font-weight: 700; color: var(--accent); }
+    .recente-nome { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .recente-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .recente-status { display: inline-block; font-size: 0.58rem; font-weight: 700; padding: 0.1rem 0.38rem; border-radius: 4px; margin-left: 0.3rem; vertical-align: middle; }
+    .recente-status.andamento { background: var(--pix-bg); color: var(--pix-fg); }
+    .recente-status.finalizada { background: var(--total-bg); color: var(--total-fg); }
+    .recentes-empty { padding: 1.25rem; text-align: center; color: var(--muted); font-size: 0.82rem; }
+    .recentes-loading { padding: 1.25rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; color: var(--muted); font-size: 0.82rem; }
+    .spin-sm { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); border-left-color: var(--accent); animation: spin 0.75s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MAIN ── */
+    .main-col { grid-column: 2; display: flex; flex-direction: column; gap: 1.5rem; align-self: start; }
+
+    .state-box { background: var(--card); border-radius: 14px; padding: 3rem 2rem; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: none; }
+    .state-box.visible { display: block; }
+    .state-box-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .state-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.35rem; }
+    .state-box p { color: var(--muted); font-size: 0.875rem; line-height: 1.55; }
+    .state-box.error h3 { color: var(--error); }
+    .spinner-wrap { display: none; align-items: center; justify-content: center; gap: 0.75rem; padding: 2.5rem; background: var(--card); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .spinner-wrap.visible { display: flex; }
+    .spinner { border: 3px solid rgba(0,0,0,0.08); border-left-color: var(--accent); border-radius: 50%; width: 30px; height: 30px; animation: spin 0.8s linear infinite; }
+    .spin-label { color: var(--muted); font-size: 0.88rem; }
+
+    /* ── RESULTADOS ── */
+    #resultadosBusca { display: none; flex-direction: column; gap: 0.5rem; }
+    #resultadosBusca.visible { display: flex; }
+    .resultado-header { font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; padding: 0 0.25rem 0.25rem; }
+    .resultado-item { background: var(--card); border-radius: 12px; padding: 0.85rem 1.1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); cursor: pointer; border: 1.5px solid transparent; transition: border-color 0.12s, background 0.12s; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .resultado-item:hover { border-color: var(--accent); background: var(--accent-light); }
+    .resultado-item-left { flex: 1; min-width: 0; }
+    .resultado-item-id { font-size: 0.7rem; font-weight: 700; color: var(--accent); }
+    .resultado-item-nome { font-size: 0.9rem; font-weight: 600; margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .resultado-item-meta { font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; }
+    .resultado-item-badge { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px; white-space: nowrap; flex-shrink: 0; }
+    .resultado-item-badge.andamento { background: var(--pix-bg); color: var(--pix-fg); }
+    .resultado-item-badge.finalizada { background: var(--total-bg); color: var(--total-fg); }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; flex-direction: column; gap: 1.5rem; }
+    #dashboard.visible { display: flex; }
+
+    .d-card { background: var(--card); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; }
+    .d-card-header { display: flex; align-items: center; gap: 0.6rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+    .d-card-body { padding: 1.5rem; }
+
+    .status-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
+    .status-badge.andamento { background: var(--pix-bg); color: var(--pix-fg); }
+    .status-badge.finalizada { background: var(--total-bg); color: var(--total-fg); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .status-badge.andamento .status-dot { background: #d97706; }
+    .status-badge.finalizada .status-dot { background: #14803c; }
+
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .info-item { display: flex; flex-direction: column; gap: 0.2rem; }
+    .info-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+    .info-value { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+
+    .viagem-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.25rem 1.5rem 0; }
+    .viagem-id { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1; }
+    .viagem-id span { color: var(--accent); }
+    .viagem-subtitle { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+
+    .totais-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .total-box { border-radius: 12px; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
+    .total-box.pix    { background: var(--pix-bg);   color: var(--pix-fg); }
+    .total-box.corp   { background: var(--corp-bg);  color: var(--corp-fg); }
+    .total-box.geral  { background: var(--total-bg); color: var(--total-fg); }
+    .total-box.adiant { background: #f4f6fb; color: var(--muted); border: 1.5px solid var(--border); }
+    .total-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+    .total-valor { font-size: 1.4rem; font-weight: 700; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    thead th { background: var(--accent); color: #fff; padding: 0.6rem 0.85rem; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; text-align: center; }
+    thead th:first-child { text-align: left; }
+    tbody tr:nth-child(even) { background: #f8f9fc; }
+    tbody tr:hover { background: var(--accent-light); }
+    tbody td { padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; }
+    tbody td:first-child { text-align: left; font-weight: 600; }
+    .td-total { font-weight: 700; background: #eff4ff; color: var(--accent-dark); }
+    tfoot td { padding: 0.55rem 0.85rem; font-weight: 700; font-size: 0.78rem; text-align: center; border-top: 2px solid var(--border); }
+    tfoot td:first-child { text-align: left; color: var(--muted); }
+    .pay-tag { display: inline-block; font-size: 0.62rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; vertical-align: middle; margin-left: 0.3rem; }
+    .pay-tag.pix  { background: var(--pix-bg); color: var(--pix-fg); }
+    .pay-tag.corp { background: var(--corp-bg); color: var(--corp-fg); }
+    .dash { color: #c4cdd8; }
+
+    .obs-block { background: #f8f9fc; border-radius: 10px; padding: 1rem 1.25rem; font-size: 0.875rem; line-height: 1.65; color: var(--text); border-left: 3px solid var(--border); white-space: pre-wrap; }
+    .btn-mais { background: var(--card); color: var(--accent); border: 1.5px solid var(--border); border-radius: 9999px; padding: 0.55rem 1.5rem; font-size: 0.8rem; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; margin: 0 auto; transition: background 0.13s, border-color 0.13s; }
+    .btn-mais:hover { background: var(--accent-light); border-color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="search-card">
+      <div class="search-header-row">
+        <div class="search-icon">
+          <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73L11 21.73a2 2 0 0 0 2 0L20 17.73A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </div>
+        <div class="search-texts"><h1>Dashboard</h1><p>Acerto de Viagem</p></div>
+      </div>
+
+      <div class="id-row">
+        <input class="search-input" type="number" id="inputId" placeholder="ID da viagem..." min="1">
+        <button class="btn-buscar" onclick="buscarPorId()" title="Buscar por ID">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+
+      <button class="btn-filtros" id="btnFiltros" onclick="toggleFiltros()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filtros
+        <span class="filtros-badge" id="filtrosBadge">0</span>
+      </button>
+
+      <div class="filtros-panel" id="filtrosPanel">
+        <div class="filtros-inner">
+          <div class="f-field"><label class="f-label">Técnico</label><select class="f-select" id="fTecnico"><option value="">Todos</option></select></div>
+          <div class="f-field"><label class="f-label">Cliente</label><select class="f-select" id="fCliente"><option value="">Todos</option></select></div>
+          <div class="f-field"><label class="f-label">Serviço</label><select class="f-select" id="fServico"><option value="">Todos</option></select></div>
+          <div class="f-field"><label class="f-label">Veículo</label><select class="f-select" id="fVeiculo"><option value="">Todos</option></select></div>
+          <div class="f-field"><label class="f-label">Equipamento</label><select class="f-select" id="fEquipamento"><option value="">Todos</option></select></div>
+          <div class="f-field">
+            <label class="f-label">Status</label>
+            <select class="f-select" id="fStatus">
+              <option value="">Todos</option>
+              <option value="Em Andamento">Em Andamento</option>
+              <option value="Finalizada">Finalizada</option>
+            </select>
+          </div>
+          <div class="f-field">
+            <label class="f-label">Período</label>
+            <div class="f-date-row">
+              <input class="f-input" type="date" id="fDataInicio">
+              <input class="f-input" type="date" id="fDataFim">
+            </div>
+          </div>
+          <button class="btn-aplicar" onclick="aplicarFiltros()">Buscar</button>
+          <button class="btn-limpar-filtros" onclick="limparFiltros()">Limpar filtros</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="recentes-card">
+      <div class="recentes-header">
+        <span>Recentes</span>
+        <span class="recentes-count" id="recentesCount">—</span>
+      </div>
+      <div class="recentes-list" id="recentesList">
+        <div class="recentes-loading"><div class="spin-sm"></div> Carregando...</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-col">
+
+    <div class="spinner-wrap" id="loadingBox">
+      <div class="spinner"></div><span class="spin-label">Carregando viagem...</span>
+    </div>
+
+    <div class="state-box" id="emptyBox">
+      <div class="state-box-icon">🗂️</div>
+      <h3>Selecione uma viagem</h3>
+      <p>Busque pelo ID, use os filtros ou clique em uma viagem recente.</p>
+    </div>
+
+    <div class="state-box error" id="errorBox">
+      <div class="state-box-icon">⚠️</div>
+      <h3>Viagem não encontrada</h3>
+      <p id="errorMsg">Verifique o ID e tente novamente.</p>
+    </div>
+
+    <div id="resultadosBusca">
+      <div class="resultado-header" id="resultadosHeader"></div>
+    </div>
+
+    <div id="dashboard">
+      <div class="d-card">
+        <div class="viagem-title-row">
+          <div><div class="viagem-id">Viagem <span id="dViagemId"></span></div><div class="viagem-subtitle" id="dSubtitle"></div></div>
+          <div id="dStatusBadge"></div>
+        </div>
+        <div class="d-card-body"><div class="info-grid" id="dInfoGrid"></div></div>
+      </div>
+
+      <div class="d-card">
+        <div class="d-card-header">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Resumo Financeiro
+        </div>
+        <div class="d-card-body"><div class="totais-grid" id="dTotaisGrid"></div></div>
+      </div>
+
+      <div class="d-card">
+        <div class="d-card-header">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+          Despesas por Envio
+        </div>
+        <div class="d-card-body" style="padding:0"><div class="table-wrap" id="dTabelaWrap"></div></div>
+      </div>
+
+      <div class="d-card" id="cardObs" style="display:none">
+        <div class="d-card-header">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Observações
+        </div>
+        <div class="d-card-body"><div class="obs-block" id="dObs"></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API_BASE = '/api';
+
+async function apiFetch(path) {
+  const res = await fetch(API_BASE + path, { credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+function fmtMoeda(v) {
+  if (!v && v !== 0) return '<span class="dash">—</span>';
+  return 'R$ ' + parseFloat(v).toFixed(2).replace('.', ',');
+}
+function fmtData(v) {
+  if (!v) return '—';
+  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
+}
+function payTag(pag) {
+  if (pag === 'dinheiro_pix') return '<span class="pay-tag pix">PIX</span>';
+  if (pag === 'cartao_corp')  return '<span class="pay-tag corp">CORP</span>';
+  return '';
+}
+function statusCls(s) { return (s || '').toLowerCase().includes('final') ? 'finalizada' : 'andamento'; }
+
+function setMainState(id) {
+  ['loadingBox','emptyBox','errorBox'].forEach(i => document.getElementById(i).classList.remove('visible'));
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('resultadosBusca').style.display = 'none';
+  if (id) document.getElementById(id).classList.add('visible');
+}
+
+// ── Filtros ───────────────────────────────────────────────────────────────────
+let filtrosAbertos = false;
+
+function toggleFiltros() {
+  filtrosAbertos = !filtrosAbertos;
+  document.getElementById('filtrosPanel').classList.toggle('open', filtrosAbertos);
+  document.getElementById('btnFiltros').classList.toggle('active', filtrosAbertos);
+}
+
+async function carregarFiltros() {
+  try {
+    const f = await apiFetch('/filtros');
+    const preencher = (id, arr) => {
+      const sel = document.getElementById(id);
+      arr.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+    };
+    preencher('fTecnico', f.tecnicos); preencher('fCliente', f.clientes);
+    preencher('fServico', f.servicos); preencher('fVeiculo', f.veiculos);
+    preencher('fEquipamento', f.equipamentos);
+  } catch(e) { console.warn('Filtros indisponíveis:', e); }
+}
+
+function contarFiltros() {
+  return ['fTecnico','fCliente','fServico','fVeiculo','fEquipamento','fStatus','fDataInicio','fDataFim']
+    .filter(id => document.getElementById(id).value).length;
+}
+function atualizarBadge() {
+  const n = contarFiltros();
+  const b = document.getElementById('filtrosBadge');
+  b.textContent = n; b.classList.toggle('visible', n > 0);
+}
+
+let _buscaParams = new URLSearchParams(); // current active filter params
+
+async function aplicarFiltros() {
+  atualizarBadge();
+  const map = { fTecnico:'tecnico', fCliente:'cliente', fServico:'servico', fVeiculo:'veiculo', fEquipamento:'equipamento', fStatus:'status', fDataInicio:'dataInicio', fDataFim:'dataFim' };
+  _buscaParams = new URLSearchParams();
+  Object.entries(map).forEach(([elId, p]) => { const v = document.getElementById(elId).value; if (v) _buscaParams.set(p, v); });
+  // Always search — even with no filters, show the 10 most recent
+  await buscarPagina(0, true);
+}
+
+async function buscarPagina(offset, resetar) {
+  setMainState('loadingBox');
+  try {
+    const params = new URLSearchParams(_buscaParams);
+    params.set('offset', offset);
+    const data = await apiFetch('/viagens/buscar?' + params.toString());
+    renderResultados(data, resetar, offset);
+  } catch(e) {
+    document.getElementById('errorMsg').textContent = 'Erro ao buscar. Verifique a conexão.';
+    setMainState('errorBox');
+  }
+}
+
+function limparFiltros() {
+  ['fTecnico','fCliente','fServico','fVeiculo','fEquipamento','fStatus','fDataInicio','fDataFim'].forEach(id => { document.getElementById(id).value = ''; });
+  atualizarBadge(); setMainState('emptyBox');
+}
+
+let _totalExibidos = 0;
+
+function renderResultados({ rows, hasMore, offset }, resetar) {
+  const container = document.getElementById('resultadosBusca');
+  const header    = document.getElementById('resultadosHeader');
+  setMainState(null);
+  container.style.display = 'flex';
+
+  // On reset: clear previous results
+  if (resetar) {
+    container.querySelectorAll('.resultado-item, .btn-mais').forEach(el => el.remove());
+    _totalExibidos = 0;
+  } else {
+    container.querySelectorAll('.btn-mais').forEach(el => el.remove());
+  }
+
+  if (resetar && !rows.length) {
+    header.textContent = 'Nenhuma viagem encontrada.';
+    return;
+  }
+
+  _totalExibidos += rows.length;
+  header.textContent = _totalExibidos + ' viagem' + (_totalExibidos !== 1 ? 's' : '') + ' encontrada' + (_totalExibidos !== 1 ? 's' : '');
+
+  rows.forEach(v => {
+    const meta = [v.servicoPrestado, fmtData(v.dataInicio), v.cidade].filter(Boolean).join(' · ');
+    const cls  = statusCls(v.status);
+    const div  = document.createElement('div');
+    div.className = 'resultado-item';
+    div.innerHTML = `<div class="resultado-item-left">
+      <div class="resultado-item-id">#${v.id}</div>
+      <div class="resultado-item-nome">${v.tecnico || '—'} · ${v.cliente || '—'}</div>
+      <div class="resultado-item-meta">${meta}</div>
+    </div><span class="resultado-item-badge ${cls}">${v.status || 'Em Andamento'}</span>`;
+    div.addEventListener('click', () => abrirViagem(v.id));
+    container.appendChild(div);
+  });
+
+  if (hasMore) {
+    const nextOffset = offset + rows.length;
+    const btn = document.createElement('button');
+    btn.className = 'btn-mais';
+    btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Carregar mais 10`;
+    btn.addEventListener('click', () => buscarPagina(nextOffset, false));
+    container.appendChild(btn);
+  }
+}
+
+// ── Recentes ─────────────────────────────────────────────────────────────────
+async function carregarRecentes() {
+  const list    = document.getElementById('recentesList');
+  // Measure the actual rendered height of the list container.
+  // Falls back to a window-based estimate on first call (before layout is settled).
+  const listH   = list.offsetHeight > 20 ? list.offsetHeight : Math.max(window.innerHeight - 560, 100);
+  const itemH   = 72; // approximate height of each recente-item in px
+  const limit   = Math.max(5, Math.ceil(listH / itemH));
+  try {
+    const rows = await apiFetch(`/viagens/recentes?limit=${limit}`);
+    document.getElementById('recentesCount').textContent = rows.length;
+    if (!rows.length) { list.innerHTML = '<div class="recentes-empty">Nenhuma viagem registrada.</div>'; return; }
+    list.innerHTML = rows.map(v => {
+      const meta = [v.servicoPrestado, fmtData(v.dataInicio)].filter(Boolean).join(' · ');
+      const cls  = statusCls(v.status);
+      return `<div class="recente-item" id="ri-${v.id}" onclick="abrirViagem(${v.id})">
+        <div class="recente-id">#${v.id}<span class="recente-status ${cls}">${v.status || 'Em Andamento'}</span></div>
+        <div class="recente-nome">${v.tecnico || '—'} · ${v.cliente || '—'}</div>
+        <div class="recente-meta">${meta}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div class="recentes-empty">Erro ao carregar.</div>'; }
+}
+
+// ── Busca ─────────────────────────────────────────────────────────────────────
+function buscarPorId() {
+  const id = parseInt(document.getElementById('inputId').value);
+  if (!id || id < 1) { setMainState('emptyBox'); return; }
+  abrirViagem(id);
+}
+
+async function abrirViagem(id) {
+  document.querySelectorAll('.recente-item').forEach(el => el.classList.remove('selected'));
+  const ri = document.getElementById('ri-' + id);
+  if (ri) ri.classList.add('selected');
+  document.getElementById('resultadosBusca').style.display = 'none';
+  setMainState('loadingBox');
+  try {
+    const data = await apiFetch(`/viagens/${id}/resumo`);
+    renderDashboard(data);
+    setMainState(null);
+    document.getElementById('dashboard').classList.add('visible');
+  } catch(err) {
+    document.getElementById('errorMsg').textContent =
+      err.message.includes('404') ? `Nenhuma viagem com ID #${id}.` : 'Erro ao conectar com a API.';
+    setMainState('errorBox');
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderDashboard({ viagem, envios, totais }) {
+  document.getElementById('dViagemId').textContent = '#' + viagem.id;
+  document.getElementById('dSubtitle').textContent = [viagem.tecnico, viagem.cliente, viagem.cidade].filter(Boolean).join(' · ');
+
+  const cls = statusCls(viagem.status);
+  document.getElementById('dStatusBadge').innerHTML =
+    `<span class="status-badge ${cls}"><span class="status-dot"></span>${viagem.status || 'Em Andamento'}</span>`;
+
+  document.getElementById('dInfoGrid').innerHTML = [
+    { label:'Técnico',        value: viagem.tecnico },
+    { label:'Auxiliares',     value: viagem.auxiliares?.join(', ') || null },
+    { label:'Data de Início', value: fmtData(viagem.dataInicio) },
+    { label:'Veículo',        value: viagem.veiculo },
+    { label:'Cliente',        value: viagem.cliente },
+    { label:'Cidade',         value: viagem.cidade },
+    { label:'Equipamento',    value: viagem.equipamento },
+    { label:'Nº de Série',    value: viagem.numSerie },
+    { label:'Serviço',        value: viagem.servicoPrestado },
+  ].filter(i => i.value)
+   .map(i => `<div class="info-item"><span class="info-label">${i.label}</span><span class="info-value">${i.value}</span></div>`)
+   .join('');
+
+  document.getElementById('dTotaisGrid').innerHTML = `
+    <div class="total-box pix"><div class="total-label">Pix / Dinheiro</div><div class="total-valor">${fmtMoeda(totais.pix)}</div></div>
+    <div class="total-box corp"><div class="total-label">Cartão Corporativo</div><div class="total-valor">${fmtMoeda(totais.corp)}</div></div>
+    <div class="total-box geral"><div class="total-label">Total Geral</div><div class="total-valor">${fmtMoeda(totais.geral)}</div></div>
+    <div class="total-box adiant"><div class="total-label">Adiantamento</div><div class="total-valor">${fmtMoeda(viagem.adiantamento)}</div></div>`;
+
+  const CATS = [
+    {key:'cafe',label:'Café'},{key:'almoco',label:'Almoço'},{key:'janta',label:'Janta'},
+    {key:'hotel',label:'Hotel'},{key:'pedagio',label:'Pedágio'},{key:'combustivel',label:'Combustível'},{key:'outros',label:'Outros'}
+  ];
+  const colTotals = Object.fromEntries(CATS.map(c => [c.key, 0]));
+  let grandTotal = 0;
+
+  const rows = envios.map(en => {
+    const d = en.despesas; let dia = 0;
+    const cells = CATS.map(({key}) => {
+      let v = 0, p = '';
+      if (['cafe','almoco','janta','hotel'].includes(key)) { v = d[key]?.valor||0; p = d[key]?.pagamento||''; }
+      else { v = (d[key]||[]).reduce((s,x)=>s+x.valor,0); p = (d[key]||[]).map(x=>x.pagamento).find(Boolean)||''; }
+      colTotals[key] += v; dia += v;
+      return v ? `<td>${fmtMoeda(v)}${payTag(p)}</td>` : `<td><span class="dash">—</span></td>`;
+    });
+    grandTotal += dia;
+    return `<tr><td>${fmtData(en.dataNFs)}</td>${cells.join('')}${dia?`<td class="td-total">${fmtMoeda(dia)}</td>`:`<td><span class="dash">—</span></td>`}</tr>`;
+  });
+
+  const tfootCells = CATS.map(({key}) => colTotals[key] ? `<td>${fmtMoeda(colTotals[key])}</td>` : `<td><span class="dash">—</span></td>`);
+  document.getElementById('dTabelaWrap').innerHTML = `<table>
+    <thead><tr><th>Data NF</th>${CATS.map(c=>`<th>${c.label}</th>`).join('')}<th>Total Dia</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+    <tfoot><tr><td>TOTAL</td>${tfootCells.join('')}<td style="color:var(--accent-dark)">${fmtMoeda(grandTotal)}</td></tr></tfoot>
+  </table>`;
+
+  const obs = envios.map(e=>(e.observacoes||'').trim()).filter(Boolean).join('\n\n');
+  const cardObs = document.getElementById('cardObs');
+  if (obs) { document.getElementById('dObs').textContent = obs; cardObs.style.display = ''; }
+  else cardObs.style.display = 'none';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.getElementById('inputId').addEventListener('keydown', e => { if (e.key === 'Enter') buscarPorId(); });
+
+const mainCol  = document.querySelector('.main-col');
+const sidebar  = document.querySelector('.sidebar');
+
+// Syncs sidebar height to main column and refetches recentes with the correct limit.
+// Debounced to avoid hammering the API on every pixel change.
+let _syncTimer;
+const syncSidebarHeight = () => {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => {
+    const h = mainCol.offsetHeight;
+    if (h > 0) sidebar.style.height = h + 'px';
+    carregarRecentes();
+  }, 80);
+};
+
+const _mainObserver = new ResizeObserver(() => requestAnimationFrame(syncSidebarHeight));
+_mainObserver.observe(mainCol);
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(syncSidebarHeight, 150);
+});
+
+window.addEventListener('load', async () => {
+  // Verifica sessão admin — redireciona se não autenticado ou sem permissão
+  try {
+    const me = await apiFetch('/auth/me');
+    if (me.role !== 'admin') {
+      window.location.href = 'index.html';
+      return;
+    }
+    // Mostra nome + botão de logout no header
+    const h1 = document.querySelector('.search-texts h1');
+    const p  = document.querySelector('.search-texts p');
+    if (h1) h1.textContent = 'Dashboard';
+    if (p)  p.innerHTML = `${me.nome} &nbsp;<a href="#" onclick="fazerLogout()" style="color:rgba(255,255,255,0.55);font-size:0.72rem;text-decoration:none;">Sair</a>`;
+  } catch(e) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  await carregarFiltros();
+  // First pass: load recentes with window-based estimate
+  await carregarRecentes();
+  // Second pass: now that layout is painted, sync sidebar and reload with real height
+  requestAnimationFrame(() => syncSidebarHeight());
+
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (id) { document.getElementById('inputId').value = id; abrirViagem(parseInt(id)); }
+  else setMainState('emptyBox');
+});
+
+async function fazerLogout() {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>

@@ -322,8 +322,16 @@
 <script>
 const API_BASE = '/api';
 
+function getToken() { return localStorage.getItem('acerto_token') || ''; }
+
 async function apiFetch(path) {
-  const res = await fetch(API_BASE + path, { credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+  const token = getToken();
+  const res = await fetch(API_BASE + path, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+    },
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
   return res.json();
 }
@@ -599,8 +607,9 @@ window.addEventListener('resize', () => {
 });
 
 window.addEventListener('load', async () => {
-  // Verifica sessão admin — redireciona se não autenticado ou sem permissão
+  // Verifica token JWT — redireciona se não autenticado ou sem permissão
   try {
+    if (!getToken()) throw new Error('sem token');
     const me = await apiFetch('/auth/me');
     if (me.role !== 'admin') {
       window.location.href = 'index.html';
@@ -628,7 +637,7 @@ window.addEventListener('load', async () => {
 });
 
 async function fazerLogout() {
-  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  localStorage.removeItem('acerto_token');
   window.location.href = 'login.html';
 }
 </script>

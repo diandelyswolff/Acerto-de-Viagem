@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <title>Login — Acerto de Viagem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #eef1f6; --card: #ffffff; --border: #dde2ea;
+      --accent: #1a56db; --accent-dark: #1648c0; --accent-light: #eff4ff;
+      --text: #1b2537; --muted: #5f738f; --error: #c8000a; --radius: 10px;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+
+    .login-card {
+      background: var(--card); border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 12px 36px rgba(0,0,0,0.08);
+      overflow: hidden; width: 100%; max-width: 400px;
+    }
+
+    .login-header {
+      background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
+      padding: 2.25rem 2.5rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .header-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .login-header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .login-header p  { color: rgba(255,255,255,0.72); font-size: 0.82rem; margin-top: 0.25rem; }
+
+    .login-body { padding: 2rem 2.5rem 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    .field { display: flex; flex-direction: column; gap: 0.38rem; }
+    .field label { font-size: 0.76rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+    .field select, .field input {
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 0.7rem 0.9rem; font-size: 0.92rem;
+      font-family: 'DM Sans', sans-serif; color: var(--text);
+      background: #fff; outline: none; width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field select:focus, .field input:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+    }
+
+    .btn-login {
+      background: var(--accent); color: #fff; border: none;
+      padding: 0.9rem; border-radius: 9999px;
+      font-size: 0.92rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 4px 16px rgba(26,86,219,0.3);
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-login:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    .btn-login:active { transform: translateY(0); }
+    .btn-login:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    #msgBox {
+      display: none; padding: 0.7rem 1rem; border-radius: var(--radius);
+      font-size: 0.85rem; font-weight: 500;
+      background: #fff1f1; color: var(--error); border: 1px solid #fecaca;
+    }
+
+    .spinner-inline {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.4); border-left-color: #fff;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 440px) {
+      .login-header { padding: 1.5rem 1.25rem; }
+      .login-body   { padding: 1.5rem 1.25rem 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-header">
+    <div class="header-icon">
+      <svg width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73L11 21.73a2 2 0 0 0 2 0L20 17.73A2 2 0 0 0 21 16z"/>
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+        <line x1="12" y1="22.08" x2="12" y2="12"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Acerto de Viagem</h1>
+      <p>Faça login para continuar</p>
+    </div>
+  </div>
+
+  <div class="login-body">
+    <div id="msgBox"></div>
+
+    <div class="field">
+      <label>Usuário</label>
+      <select id="selectUsuario">
+        <option value="">Carregando...</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inputSenha" placeholder="Digite sua senha">
+    </div>
+
+    <button class="btn-login" id="btnLogin" onclick="fazerLogin()">
+      <div class="spinner-inline" id="spinner"></div>
+      <span id="btnLabel">Entrar</span>
+    </button>
+  </div>
+</div>
+
+<script>
+const API_BASE = '/api';
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API_BASE + path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+  return res.json();
+}
+
+function showMsg(text) {
+  const box = document.getElementById('msgBox');
+  box.textContent = text;
+  box.style.display = 'block';
+}
+
+function setLoading(v) {
+  document.getElementById('btnLogin').disabled = v;
+  document.getElementById('spinner').style.display = v ? 'block' : 'none';
+  document.getElementById('btnLabel').textContent = v ? 'Entrando...' : 'Entrar';
+}
+
+// Verifica se já está autenticado ao carregar
+window.addEventListener('load', async () => {
+  try {
+    const me = await apiFetch('/auth/me');
+    // Já logado — redireciona conforme o role
+    window.location.href = me.role === 'admin' ? 'dashboard.html' : 'index.html';
+    return;
+  } catch (e) {
+    // Não autenticado — continua na tela de login
+  }
+
+  // Carrega lista de usuários
+  try {
+    const usuarios = await apiFetch('/auth/usuarios');
+    const sel = document.getElementById('selectUsuario');
+    sel.innerHTML = '<option value="">Selecione seu nome...</option>';
+    usuarios.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = u.nome;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    document.getElementById('selectUsuario').innerHTML = '<option value="">Erro ao carregar usuários</option>';
+  }
+});
+
+document.getElementById('inputSenha').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fazerLogin();
+});
+
+async function fazerLogin() {
+  const usuarioId = document.getElementById('selectUsuario').value;
+  const senha     = document.getElementById('inputSenha').value;
+
+  document.getElementById('msgBox').style.display = 'none';
+
+  if (!usuarioId) { showMsg('Selecione seu nome.'); return; }
+  if (!senha)     { showMsg('Digite sua senha.'); return; }
+
+  setLoading(true);
+  try {
+    const me = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ usuarioId: parseInt(usuarioId), senha }),
+    });
+    // Redireciona conforme o role
+    window.location.href = me.role === 'admin' ? 'dashboard.html' : 'index.html';
+  } catch (e) {
+    showMsg(e.message || 'Erro ao fazer login.');
+    setLoading(false);
+  }
+}
+</script>
+</body>
+</html>

@@ -900,10 +900,16 @@ const API_BASE = '/api';
 // ─────────────────────────────────────────────
 //  HELPERS DE API
 // ─────────────────────────────────────────────
+function getToken() { return localStorage.getItem('acerto_token') || ''; }
+
 async function apiFetch(path, options = {}) {
+  const token = getToken();
   const res = await fetch(API_BASE + path, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+      ...(options.headers || {}),
+    },
     ...options,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
@@ -914,8 +920,9 @@ async function apiFetch(path, options = {}) {
 //  INICIALIZAÇÃO
 // ─────────────────────────────────────────────
 window.addEventListener('load', async () => {
-  // Verifica sessão — redireciona para login se não autenticado
+  // Verifica token JWT — redireciona para login se não autenticado
   try {
+    if (!getToken()) throw new Error('sem token');
     const me = await apiFetch('/auth/me');
     // Preenche e trava o campo técnico com o usuário logado
     const sel = document.getElementById('tecnico');
@@ -945,7 +952,7 @@ window.addEventListener('load', async () => {
 });
 
 async function fazerLogout() {
-  await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'include' });
+  localStorage.removeItem('acerto_token');
   window.location.href = 'login.html';
 }
 

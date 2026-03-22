@@ -10,11 +10,23 @@ const fetch = globalThis.fetch ?? require('node-fetch');
 
 const app = express();
 
-// CORS — same-origin quando servido pelo Express; mantido para clientes externos
+// CORS — responde preflights OPTIONS e permite credenciais cross-origin
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost:3000')
+  .split(',').map(o => o.trim());
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:3000',
+  origin: (origin, cb) => {
+    // Permite requisições sem origin (ex: Postman, curl) e origins cadastradas
+    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) return cb(null, true);
+    cb(new Error('CORS: origem não permitida — ' + origin));
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Responde preflights explicitamente (necessário para cookies cross-origin)
+app.options('*', cors());
 app.use(express.json({ limit: '20mb' }));
 
 // Sessão httpOnly — cookie seguro, não acessível por JS no browser

@@ -530,8 +530,11 @@ app.get('/api/auth/me', (req, res) => {
   res.json(req.session.usuario);
 });
 
-// Rota raiz — health check para o Render confirmar que o serviço está no ar
-app.get('/', (req, res) => res.json({ status: 'ok' }));
+// Serve os HTMLs estáticos da pasta public/
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Rota raiz → login
+app.get('/', (req, res) => res.redirect('/login.html'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`));

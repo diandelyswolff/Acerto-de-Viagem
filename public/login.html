@@ -1,94 +1,581 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <title>Login — Acerto de Viagem</title>
+  <title>Acerto de Viagem</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg: #eef1f6; --card: #ffffff; --border: #dde2ea;
-      --accent: #1a56db; --accent-dark: #1648c0; --accent-light: #eff4ff;
-      --text: #1b2537; --muted: #5f738f; --error: #c8000a; --radius: 10px;
+      --bg: #eef1f6;
+      --card: #ffffff;
+      --border: #dde2ea;
+      --accent: #1a56db;
+      --accent-dark: #1648c0;
+      --accent-light: #eff4ff;
+      --text: #1b2537;
+      --muted: #5f738f;
+      --error: #c8000a;
+      --success: #14803c;
+      --radius: 10px;
     }
+
     body {
       font-family: 'DM Sans', sans-serif;
-      background: var(--bg); color: var(--text);
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
-      padding: 1rem;
+      padding: 2rem 1rem 5rem;
+      -webkit-text-size-adjust: 100%;
     }
 
-    .login-card {
-      background: var(--card); border-radius: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 12px 36px rgba(0,0,0,0.08);
-      overflow: hidden; width: 100%; max-width: 400px;
+    .card {
+      max-width: 820px; margin: 0 auto;
+      background: var(--card); border-radius: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 8px 28px rgba(0,0,0,0.06);
+      overflow: hidden;
     }
 
-    .login-header {
+    .card-header {
       background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
       padding: 2.25rem 2.5rem;
-      display: flex; align-items: center; gap: 1rem;
+      display: flex; align-items: center; gap: 1.1rem;
     }
     .header-icon {
       width: 52px; height: 52px; border-radius: 14px;
       background: rgba(255,255,255,0.18);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .login-header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
-    .login-header p  { color: rgba(255,255,255,0.72); font-size: 0.82rem; margin-top: 0.25rem; }
+    .card-header h1 { font-size: 1.55rem; font-weight: 700; color: #fff; line-height: 1.2; }
+    .card-header p  { color: rgba(255,255,255,0.72); font-size: 0.82rem; margin-top: 0.3rem; }
 
-    .login-body { padding: 2rem 2.5rem 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .card-body { padding: 2.5rem; }
+
+    .section { margin-bottom: 2.25rem; }
+    .section-title {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 1.1rem;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 600px) {
+      body { padding: 0 0 4rem; }
+      .card { border-radius: 0; box-shadow: none; min-height: 100vh; }
+      .card-header {
+        padding: 1.1rem 1rem 1.1rem;
+        gap: 0.75rem;
+        position: sticky; top: 0; z-index: 50;
+      }
+      .header-icon { width: 40px; height: 40px; border-radius: 10px; }
+      .header-icon svg { width: 20px; height: 20px; }
+      .card-header h1 { font-size: 1.1rem; }
+      .card-header p  { font-size: 0.73rem; margin-top: 0.15rem; }
+      .card-body { padding: 1.1rem 1rem; }
+      .section { margin-bottom: 1.75rem; }
+      .section-title { font-size: 0.63rem; margin-bottom: 0.85rem; }
+      .g2, .g3 { grid-template-columns: 1fr; gap: 0.75rem; }
+      .field input, .field select, .field textarea {
+        padding: 0.75rem 0.9rem;
+        font-size: 1rem;
+        border-radius: 10px;
+      }
+      .field label { font-size: 0.72rem; }
+    }
 
     .field { display: flex; flex-direction: column; gap: 0.38rem; }
     .field label { font-size: 0.76rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
-    .field select, .field input {
+    .field input, .field select, .field textarea {
       border: 1.5px solid var(--border); border-radius: var(--radius);
-      padding: 0.7rem 0.9rem; font-size: 0.92rem;
+      padding: 0.65rem 0.9rem; font-size: 0.9rem;
       font-family: 'DM Sans', sans-serif; color: var(--text);
       background: #fff; outline: none; width: 100%;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .field select:focus, .field input:focus {
+    .field input:focus, .field select:focus, .field textarea:focus {
       border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
     }
+    .field textarea { resize: vertical; min-height: 80px; }
+    /* ── SEARCHABLE SELECT ── */
+    .ss-wrap { position: relative; }
+    .ss-input {
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 0.65rem 0.9rem; font-size: 0.9rem;
+      font-family: 'DM Sans', sans-serif; color: var(--text);
+      background: #fff; outline: none; width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      cursor: text;
+    }
+    .ss-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+    .ss-input.autofilled { background: #eff6ff; border-color: var(--accent); color: var(--text); cursor: default; }
+    .ss-input:disabled { background: #f4f6fb; color: var(--muted); cursor: not-allowed; }
+    .ss-dropdown {
+      display: none; position: absolute; top: calc(100% + 3px); left: 0; right: 0;
+      background: #fff; border: 1.5px solid var(--accent);
+      border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      max-height: 220px; overflow-y: auto; z-index: 200;
+    }
+    .ss-wrap.open .ss-dropdown { display: block; }
+    .ss-option {
+      padding: 0.6rem 0.9rem; font-size: 0.88rem; cursor: pointer;
+      color: var(--text); transition: background 0.1s;
+    }
+    .ss-option:hover, .ss-option.focused { background: var(--accent-light); }
+    .ss-option.selected { font-weight: 600; color: var(--accent-dark); }
+    .ss-empty { padding: 0.6rem 0.9rem; font-size: 0.85rem; color: var(--muted); }
+    @media (max-width: 600px) {
+      .ss-input { padding: 0.75rem 0.9rem; font-size: 1rem; border-radius: 10px; }
+    }
 
-    .btn-login {
+    /* ── TRIP MODE TOGGLE ── */
+    .trip-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .trip-opt { cursor: pointer; }
+    .trip-opt input[type="radio"] { display: none; }
+    .trip-opt-inner {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 0.5rem; padding: 1.25rem 1rem;
+      border: 2px solid var(--border); border-radius: 14px;
+      background: #fafbfc; text-align: center; user-select: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .trip-opt:hover .trip-opt-inner { border-color: #aabcee; }
+    .trip-opt input:checked + .trip-opt-inner {
+      border-color: var(--accent); background: var(--accent-light);
+      box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+    }
+    .trip-icon {
+      width: 44px; height: 44px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      background: #e9edf5; transition: background 0.15s;
+    }
+    .trip-opt input:checked + .trip-opt-inner .trip-icon { background: var(--accent); }
+    .trip-icon svg { stroke: var(--muted); transition: stroke 0.15s; }
+    .trip-opt input:checked + .trip-opt-inner .trip-icon svg { stroke: #fff; }
+    .trip-name { font-size: 0.93rem; font-weight: 700; color: var(--text); }
+    .trip-opt input:checked + .trip-opt-inner .trip-name { color: var(--accent-dark); }
+    .trip-desc { font-size: 0.74rem; color: var(--muted); line-height: 1.4; }
+
+    @media (max-width: 600px) {
+      .trip-opt-inner { padding: 1rem 0.75rem; gap: 0.4rem; border-radius: 12px; }
+      .trip-icon { width: 38px; height: 38px; border-radius: 9px; }
+      .trip-name { font-size: 0.85rem; }
+      .trip-desc { font-size: 0.68rem; }
+    }
+
+    /* ── PAYMENT FLAG ── */
+    .pay-row {
+      display: flex; gap: 0.4rem;
+      padding: 0.45rem 0.7rem 0.5rem;
+      border-top: 1px solid #d4dff8;
+    }
+    .pay-btn {
+      flex: 1; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.02em; text-align: center; line-height: 1.35;
+      padding: 0.32rem 0.25rem;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      cursor: pointer; background: #fff; color: var(--muted);
+      transition: all 0.12s; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .pay-btn input[type="radio"] { display: none; }
+    .pay-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .pay-btn.sel-pix  { background: #fef9c3; border-color: #d97706; color: #92400e; }
+    .pay-btn.sel-corp { background: #dbeafe; border-color: var(--accent); color: var(--accent-dark); }
+
+    @media (max-width: 600px) {
+      .pay-btn { padding: 0.45rem 0.2rem; font-size: 0.62rem; }
+    }
+
+    /* ── SINGLE EXPENSE CARDS ── */
+    .single-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .single-grid { grid-template-columns: 1fr 1fr; gap: 0.65rem; } }
+    @media (max-width: 380px) { .single-grid { grid-template-columns: 1fr; } }
+
+    .exp-card {
+      border: 1.5px solid var(--border); border-radius: 12px;
+      background: #fafbfc; overflow: hidden;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .exp-card.has-file { border-color: var(--accent); background: var(--accent-light); }
+    .exp-card-title {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 0.6rem 0.85rem 0.45rem; border-bottom: 1px solid var(--border);
+    }
+    .exp-card.has-file .exp-card-title { color: var(--accent); border-bottom-color: #bfcfff; }
+    .upload-zone {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.35rem; padding: 1rem 0.75rem;
+      cursor: pointer; position: relative; min-height: 84px;
+    }
+    .upload-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-icon { color: #a8b5c8; transition: color 0.15s; }
+    .exp-card.has-file .upload-icon { color: var(--accent); }
+    .upload-lbl {
+      font-size: 0.74rem; font-weight: 500; color: var(--muted);
+      text-align: center; line-height: 1.4;
+    }
+    .exp-card.has-file .upload-lbl {
+      color: var(--accent-dark); font-weight: 600;
+      max-width: 95%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .exp-pay { display: none; }
+    .exp-card.has-file .exp-pay { display: flex; }
+
+    /* ── MULTI-SLOT ── */
+    .multi-wrap { display: flex; flex-direction: column; gap: 1.25rem; }
+    .multi-group-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem;
+    }
+    .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; }
+
+    @media (max-width: 600px) {
+      .slots-grid { grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+      .multi-group-label { font-size: 0.68rem; }
+    }
+    @media (max-width: 380px) {
+      .slots-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .slot-card {
+      border: 1.5px dashed var(--border); border-radius: 10px;
+      background: #fafbfc; overflow: hidden;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .slot-card.has-file { border-style: solid; border-color: var(--accent); background: var(--accent-light); }
+    .slot-num {
+      font-size: 0.62rem; font-weight: 700; color: #b0bac8;
+      padding: 0.32rem 0.55rem 0; letter-spacing: 0.04em;
+    }
+    .slot-card.has-file .slot-num { color: var(--accent); }
+    .slot-upload {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.2rem; padding: 0.5rem 0.5rem 0.5rem;
+      cursor: pointer; position: relative; min-height: 58px;
+    }
+    .slot-upload input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .slot-icon { color: #c4cdd8; }
+    .slot-card.has-file .slot-icon { color: var(--accent); }
+    .slot-lbl { font-size: 0.67rem; color: var(--muted); text-align: center; line-height: 1.3; }
+    .slot-card.has-file .slot-lbl {
+      color: var(--accent-dark); font-weight: 600;
+      max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .slot-pay { display: none; }
+    .slot-pay .pay-btn { font-size: 0.58rem; padding: 0.26rem 0.1rem; }
+    .slot-card.has-file .slot-pay { display: flex; }
+    .slot-pay { gap: 0.28rem; padding: 0.28rem 0.4rem 0.36rem; border-top: 1px solid #c8d7ff; }
+
+    /* ── CHECKBOX ── */
+    .check-label {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      cursor: pointer; background: #fff;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .check-label:has(input:checked) { border-color: var(--accent); background: var(--accent-light); }
+    .check-label input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; }
+    .check-label span { font-size: 0.875rem; font-weight: 500; }
+
+    @media (max-width: 600px) {
+      .check-label { padding: 0.85rem 1rem; }
+      .check-label input[type="checkbox"] { width: 20px; height: 20px; }
+    }
+
+    /* ── SIGNATURE ── */
+    .sig-wrap {
+      border: 2px dashed var(--border); border-radius: var(--radius);
+      background: #fcfcfd; overflow: hidden; position: relative;
+    }
+    .sig-wrap.locked { border-color: var(--accent); border-style: solid; }
+    .sig-wrap canvas { display: block; width: 100%; height: 190px; cursor: crosshair; touch-action: none; }
+    .sig-hint {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.5rem; pointer-events: none; opacity: 1; transition: opacity 0.2s; color: #c0c8d4;
+    }
+    .sig-hint span { font-size: 0.8rem; }
+    .btn-clear {
+      background: none; border: none; font-size: 0.78rem; color: var(--error);
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      font-weight: 600; padding: 0.3rem 0; margin-top: 0.45rem;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-clear:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .sig-wrap canvas { height: 160px; }
+      .sig-hint span { font-size: 0.75rem; }
+    }
+
+    #messageBox { display: none; padding: 0.75rem 1rem; border-radius: var(--radius); font-size: 0.875rem; font-weight: 500; margin-bottom: 1rem; }
+
+    .submit-row { display: flex; justify-content: flex-end; padding-top: 1.5rem; border-top: 1px solid var(--border); margin-top: 0.5rem; }
+    .btn-primary {
       background: var(--accent); color: #fff; border: none;
-      padding: 0.9rem; border-radius: 9999px;
-      font-size: 0.92rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
-      cursor: pointer; width: 100%;
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.85rem 2.2rem; border-radius: 9999px;
+      font-size: 0.9rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
       box-shadow: 0 4px 16px rgba(26,86,219,0.3);
-      transition: background 0.15s, transform 0.1s;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
-    .btn-login:hover { background: var(--accent-dark); transform: translateY(-1px); }
-    .btn-login:active { transform: translateY(0); }
-    .btn-login:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 22px rgba(26,86,219,0.35); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    #msgBox {
-      display: none; padding: 0.7rem 1rem; border-radius: var(--radius);
-      font-size: 0.85rem; font-weight: 500;
-      background: #fff1f1; color: var(--error); border: 1px solid #fecaca;
+    @media (max-width: 600px) {
+      .submit-row { justify-content: stretch; padding-top: 1.25rem; }
+      .btn-primary { width: 100%; justify-content: center; padding: 1rem 1.5rem; font-size: 0.95rem; }
     }
 
-    .spinner-inline {
-      width: 16px; height: 16px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.4); border-left-color: #fff;
-      animation: spin 0.7s linear infinite; display: none;
+    .loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.82); backdrop-filter: blur(4px);
+      display: none; justify-content: center; align-items: center; z-index: 1000;
+    }
+    .spinner {
+      border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--accent);
+      border-radius: 50%; width: 36px; height: 36px;
+      animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    @media (max-width: 440px) {
-      .login-header { padding: 1.5rem 1.25rem; }
-      .login-body   { padding: 1.5rem 1.25rem 2rem; }
+    /* ── SUCCESS ── */
+    #successScreen {
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1.25rem; padding: 3.5rem 2rem; text-align: center;
+    }
+    .check-circle {
+      width: 72px; height: 72px; border-radius: 50%; background: #dcfce7;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #successScreen h2 { font-size: 1.6rem; font-weight: 700; }
+    #successScreen > p { color: var(--muted); font-size: 0.9rem; }
+
+    .success-code-box {
+      background: var(--accent-light); border: 2px solid var(--accent);
+      border-radius: 14px; padding: 1.25rem 1.75rem;
+      display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+      width: 100%; max-width: 380px;
+    }
+    .success-code-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+    .success-code-value { font-family: 'Courier New', monospace; font-size: 1.4rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text); }
+    .success-code-hint { font-size: 0.77rem; color: var(--muted); line-height: 1.5; text-align: center; margin-top: 0.15rem; }
+
+    @media (max-width: 600px) {
+      #successScreen { padding: 2.5rem 1.25rem; gap: 1rem; }
+      #successScreen h2 { font-size: 1.35rem; }
+      .success-code-value { font-size: 1.15rem; letter-spacing: 0.05em; }
+      .success-code-box { padding: 1rem 1.25rem; }
+    }
+
+    .btn-copy {
+      display: flex; align-items: center; gap: 0.45rem;
+      background: none; border: 1.5px solid var(--accent);
+      color: var(--accent); font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem; font-weight: 700; border-radius: 9999px;
+      padding: 0.45rem 1.1rem; cursor: pointer; margin-top: 0.3rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-copy:hover { background: var(--accent); color: #fff; }
+    .btn-copy.copied { background: #dcfce7; border-color: var(--success); color: var(--success); }
+
+    /* ── SHARE BUTTONS ── */
+    .share-row {
+      display: flex; gap: 0.6rem; margin-top: 0.3rem; width: 100%; justify-content: center;
+    }
+    .btn-share {
+      flex: 1; max-width: 160px;
+      display: flex; align-items: center; justify-content: center; gap: 0.45rem;
+      border: none; border-radius: 9999px;
+      font-size: 0.8rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      padding: 0.55rem 1rem; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .btn-share:hover  { opacity: 0.88; transform: translateY(-1px); }
+    .btn-share:active { transform: translateY(0); }
+    .btn-share.whatsapp { background: #25d366; color: #fff; }
+    .btn-share.email    { background: #f0f4ff; color: var(--accent-dark); border: 1.5px solid #c3d4f8; }
+
+    @media (max-width: 600px) {
+      .share-row { gap: 0.5rem; }
+      .btn-share { max-width: none; padding: 0.65rem 0.75rem; font-size: 0.82rem; }
+    }
+
+    /* ── VALOR INPUT (single cards) ── */
+    .exp-valor {
+      display: none; align-items: center; gap: 0.45rem;
+      padding: 0.38rem 0.85rem 0.45rem;
+      border-top: 1px solid #d4dff8; background: #f5f8ff;
+    }
+    .exp-card.has-file .exp-valor { display: flex; }
+    .exp-valor-prefix { font-size: 0.7rem; font-weight: 700; color: var(--accent); white-space: nowrap; letter-spacing: 0.03em; }
+    .exp-valor input[type="number"] {
+      flex: 1; border: 1.5px solid #c3d4f8; border-radius: 6px;
+      padding: 0.28rem 0.5rem; font-size: 0.84rem; font-weight: 600;
+      font-family: 'DM Sans', sans-serif; color: var(--text);
+      outline: none; background: #fff; width: 100%;
+      transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .exp-valor input[type="number"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,86,219,0.12); }
+
+    /* ── VALOR INPUT (slot cards) ── */
+    .slot-valor {
+      display: none; align-items: center; gap: 0.22rem;
+      padding: 0.22rem 0.4rem 0.28rem; border-top: 1px solid #c8d7ff;
+      background: #f5f8ff;
+    }
+    .slot-card.has-file .slot-valor { display: flex; }
+    .slot-valor-prefix { font-size: 0.58rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .slot-valor input[type="number"] {
+      flex: 1; border: 1.5px solid #c3d4f8; border-radius: 5px;
+      padding: 0.18rem 0.28rem; font-size: 0.7rem; font-weight: 600;
+      font-family: 'DM Sans', sans-serif; color: var(--text);
+      outline: none; background: #fff; width: 100%;
+    }
+    .slot-valor input[type="number"]:focus { border-color: var(--accent); }
+
+    /* ── MULTI TOTAL ── */
+    .multi-total {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 0.65rem; padding: 0.55rem 0.9rem;
+      background: var(--accent-light); border: 1.5px solid #bfcfff;
+      border-radius: 9px;
+    }
+    .multi-total-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .multi-total-val { font-size: 1rem; font-weight: 700; color: var(--accent-dark); font-variant-numeric: tabular-nums; }
+
+    /* ── ANDAMENTO PANEL ── */
+    .andamento-panel { display: none; flex-direction: column; gap: 0.75rem; margin-top: 0.8rem; }
+    .andamento-panel.show { display: flex; }
+
+    .andamento-source { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+    .src-opt { cursor: pointer; }
+    .src-opt input[type="radio"] { display: none; }
+    .src-opt-inner {
+      display: flex; align-items: center; gap: 0.55rem;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      background: #fafbfc; font-size: 0.82rem; font-weight: 600;
+      color: var(--muted); user-select: none;
+      transition: border-color 0.14s, background 0.14s, color 0.14s;
+    }
+    .src-opt:hover .src-opt-inner { border-color: #aabcee; }
+    .src-opt input:checked + .src-opt-inner { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
+    .src-dot {
+      width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0;
+      transition: border-color 0.14s, background 0.14s;
+    }
+    .src-opt input:checked + .src-opt-inner .src-dot { border-color: var(--accent); background: var(--accent); }
+
+    .codigo-input-wrap { display: none; flex-direction: column; gap: 0.38rem; }
+    .codigo-input-wrap.show { display: flex; }
+    .codigo-input-wrap label { font-size: 0.74rem; font-weight: 600; color: var(--muted); letter-spacing: 0.03em; }
+    .codigo-input-wrap input {
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 0.65rem 0.9rem; font-size: 0.9rem; font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text); background: #fff; outline: none; width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .codigo-input-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+    .codigo-input-wrap input::placeholder { font-weight: 400; }
+
+    .banner-vinculado {
+      padding: 0.7rem 1rem; border-radius: var(--radius);
+      border: 1.5px solid #c3d4f8; background: var(--accent-light);
+      font-size: 0.84rem; color: #1e3a7a;
+      display: flex; align-items: flex-start; gap: 0.65rem;
+    }
+    .banner-vinculado.warn { background: #fff1f1; border-color: #fecaca; color: var(--error); }
+    .banner-vinculado-body { display: flex; flex-direction: column; gap: 0.2rem; line-height: 1.4; }
+    .banner-codigo-principal { font-weight: 700; font-size: 0.9rem; }
+    .banner-info-extra { font-size: 0.78rem; color: #3a5aa0; opacity: 0.9; }
+
+    /* ── TRIP LIST ── */
+    .trip-list-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; }
+    .trip-list-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); }
+    .btn-refresh { background:none; border:none; cursor:pointer; color:var(--accent); font-size:0.75rem; font-weight:600; font-family:'DM Sans',sans-serif; padding:0; display:flex; align-items:center; gap:0.3rem; min-height:36px; -webkit-tap-highlight-color:transparent; }
+    .btn-refresh:hover { text-decoration:underline; }
+    .trip-list-loading { display:flex; align-items:center; justify-content:center; gap:0.6rem; padding:1.4rem 1rem; color:var(--muted); font-size:0.84rem; }
+    .spin-sm { width:16px; height:16px; border-radius:50%; border:2px solid rgba(0,0,0,0.1); border-left-color:var(--accent); animation:spin 0.75s linear infinite; flex-shrink:0; }
+    .trip-list { display:flex; flex-direction:column; gap:0.45rem; }
+    .trip-item { border:1.5px solid var(--border); border-radius:10px; padding:0.7rem 1rem; cursor:pointer; background:#fafbfc; transition:border-color 0.15s,background 0.15s,box-shadow 0.15s; -webkit-tap-highlight-color:transparent; }
+    .trip-item:hover { border-color:#aabcee; background:#f4f7ff; }
+    .trip-item.selected { border-color:var(--accent); background:var(--accent-light); box-shadow:0 0 0 3px rgba(26,86,219,0.1); }
+    .trip-item-code { font-size: 0.75rem; font-weight: 700; color: var(--accent); }
+    .trip-item.selected .trip-item-code { color:var(--accent-dark); }
+    .trip-item-name { font-size:0.875rem; font-weight:600; color:var(--text); margin-top:0.15rem; }
+    .trip-item-meta { font-size:0.74rem; color:var(--muted); margin-top:0.1rem; }
+    .trip-list-empty { text-align:center; padding:1.4rem; border-radius:10px; color:var(--muted); font-size:0.84rem; background:#fafbfc; border:1.5px dashed var(--border); line-height:1.55; }
+
+    @media (max-width: 600px) {
+      .trip-item { padding: 0.65rem 0.85rem; }
+      .trip-item-name { font-size: 0.82rem; }
+      .src-opt-inner { padding: 0.55rem 0.7rem; font-size: 0.78rem; }
+    }
+
+    /* ── CAMPOS AUTO-PREENCHIDOS ── */
+    .field input.autofilled,
+    .field select.autofilled {
+      background: #eff6ff;
+      border-color: var(--accent);
+      color: var(--text);
+      cursor: default;
+    }
+    .field input.autofilled:focus,
+    .field select.autofilled:focus { box-shadow: 0 0 0 3px rgba(26,86,219,0.08); }
+    .autofill-hint {
+      display: none;
+      font-size: 0.68rem; font-weight: 600; color: var(--accent);
+      letter-spacing: 0.03em; margin-top: 0.2rem;
+    }
+    .autofill-hint.visible { display: block; }
+
+    .section-locked-note {
+      display: none; align-items: center; gap: 0.45rem;
+      margin-top: -0.5rem; margin-bottom: 0.9rem;
+      padding: 0.55rem 0.85rem; border-radius: 8px;
+      background: #eff6ff; border: 1.5px solid #bfdbfe;
+      font-size: 0.76rem; font-weight: 500; color: #1e40af;
+    }
+    .section-locked-note.visible { display: flex; }
+    .section-locked-note svg { flex-shrink: 0; }
+
+    /* ── SIG ACTIONS ── */
+    .sig-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
+    @media (max-width: 600px) {
+      .sig-actions { flex-direction: column; align-items: stretch; gap: 0.6rem; }
+      .sig-actions .btn-clear { order: 2; text-align: center; padding: 0.5rem 0; }
+      .sig-actions .check-label { order: 1; }
     }
   </style>
 </head>
 <body>
 
-<div class="login-card">
-  <div class="login-header">
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+<div class="card">
+
+  <div class="card-header">
     <div class="header-icon">
       <svg width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73L11 21.73a2 2 0 0 0 2 0L20 17.73A2 2 0 0 0 21 16z"/>
@@ -98,35 +585,321 @@
     </div>
     <div>
       <h1>Acerto de Viagem</h1>
-      <p>Faça login para continuar</p>
+      <p>Preencha todos os campos e assine ao final</p>
     </div>
   </div>
 
-  <div class="login-body">
-    <div id="msgBox"></div>
+  <div class="card-body">
+  <div id="formContainer">
 
-    <div class="field">
-      <label>Usuário</label>
-      <select id="selectUsuario">
-        <option value="">Carregando...</option>
-      </select>
+    <!-- TIPO DE VIAGEM -->
+    <div class="section">
+      <div class="section-title">Viagem</div>
+      <div class="trip-toggle">
+
+        <label class="trip-opt">
+          <input type="radio" name="tripMode" value="nova" checked onchange="onModeChange()">
+          <div class="trip-opt-inner">
+            <div class="trip-icon">
+              <svg width="20" height="20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8"  y1="12" x2="16" y2="12"/>
+              </svg>
+            </div>
+            <div class="trip-name">Nova Viagem</div>
+            <div class="trip-desc">Inicia um novo acerto com código gerado automaticamente</div>
+          </div>
+        </label>
+
+        <label class="trip-opt">
+          <input type="radio" name="tripMode" value="andamento" onchange="onModeChange()">
+          <div class="trip-opt-inner">
+            <div class="trip-icon">
+              <svg width="20" height="20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <polyline points="17 1 21 5 17 9"/>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </div>
+            <div class="trip-name">Em Andamento</div>
+            <div class="trip-desc">Adiciona a uma viagem já existente pelo ID</div>
+          </div>
+        </label>
+
+      </div>
+
+      <!-- painel expandido ao selecionar "Em Andamento" -->
+      <div class="andamento-panel" id="andamentoPanel">
+
+        <div>
+          <div class="trip-list-header">
+            <span class="trip-list-label">Suas viagens</span>
+            <button class="btn-refresh" onclick="carregarViagens()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Atualizar
+            </button>
+          </div>
+          <div id="tripListContainer">
+            <div class="trip-list-loading"><div class="spin-sm"></div> Carregando...</div>
+          </div>
+        </div>
+
+
+        <!-- banner de confirmação -->
+        <div class="banner-vinculado" id="bannerVinculado" style="display:none">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:2px">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          <div class="banner-vinculado-body">
+            <span>Vinculado à viagem</span>
+            <span class="banner-codigo-principal" id="bannerCodigoVal">—</span>
+            <span class="banner-info-extra" id="bannerInfoExtra"></span>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <div class="field">
-      <label>Senha</label>
-      <input type="password" id="inputSenha" placeholder="Digite sua senha">
+    <!-- EQUIPE -->
+    <div class="section">
+      <div class="section-title">Equipe</div>
+      <div class="section-locked-note" id="lockedNoteEquipe">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Preenchido com os dados da primeira inserção desta viagem
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>Técnico</label>
+          <select id="tecnico" required>
+            <option value="">Selecione o técnico...</option>
+            <option value="William Vaccari">William Vaccari</option>
+            <option value="Leonardo Quednau">Leonardo Quednau</option>
+            <option value="Luiz Vieira">Luiz Vieira</option>
+          </select>
+          <span class="autofill-hint" id="hint-tecnico">✦ preenchido automaticamente</span>
+        </div>
+        <div class="field">
+          <label>Auxiliares</label>
+          <input type="text" id="auxiliares" placeholder="Nome(s) do(s) auxiliar(es)">
+          <span class="autofill-hint" id="hint-auxiliares">✦ preenchido automaticamente</span>
+        </div>
+      </div>
     </div>
 
-    <button class="btn-login" id="btnLogin" onclick="fazerLogin()">
-      <div class="spinner-inline" id="spinner"></div>
-      <span id="btnLabel">Entrar</span>
-    </button>
+    <!-- SERVIÇO -->
+    <div class="section">
+      <div class="section-title">Dados do Serviço</div>
+      <div class="section-locked-note" id="lockedNoteServico">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Preenchido com os dados da primeira inserção desta viagem
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>Data de Início do Serviço</label>
+          <input type="date" id="dataInicio" required>
+          <span class="autofill-hint" id="hint-dataInicio">✦ preenchido automaticamente</span>
+        </div>
+        <div class="field">
+          <label>Veículo</label>
+          <input type="text" id="veiculo" placeholder="Ex: Gol – ABC-1234" required>
+          <span class="autofill-hint" id="hint-veiculo">✦ preenchido automaticamente</span>
+        </div>
+        <div class="field">
+          <label>Serviço Prestado</label>
+          <select id="servicoPrestado" required>
+            <option value="">Selecione...</option>
+            <option>Manutenção</option>
+            <option>Instalação</option>
+            <option>Startup</option>
+            <option>Entrega</option>
+            <option>Visita Técnica</option>
+            <option>Visita Comercial</option>
+          </select>
+          <span class="autofill-hint" id="hint-servicoPrestado">✦ preenchido automaticamente</span>
+        </div>
+        <div class="field">
+          <label>Status da Viagem</label>
+          <select id="statusViagem" required>
+            <option value="">Selecione...</option>
+            <option value="Em Andamento">Em Andamento</option>
+            <option value="Finalizada">Finalizada</option>
+          </select>
+          <span class="autofill-hint" id="hint-statusViagem">✦ preenchido automaticamente</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CLIENTE -->
+    <div class="section">
+      <div class="section-title">Cliente</div>
+      <div class="section-locked-note" id="lockedNoteCliente">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Preenchido com os dados da primeira inserção desta viagem
+      </div>
+      <div class="g3">
+        <div class="field">
+          <label>Cliente</label>
+          <div class="ss-wrap" id="ss-cliente">
+            <input class="ss-input" type="text" id="cliente-search" placeholder="Digite para buscar..." autocomplete="off"
+              oninput="ssFilter('cliente')" onfocus="ssOpen('cliente')" onblur="ssBlur('cliente')" onkeydown="ssKeydown(event,'cliente')">
+            <input type="hidden" id="cliente" required>
+            <div class="ss-dropdown" id="ss-cliente-list"></div>
+          </div>
+          <span class="autofill-hint" id="hint-cliente">✦ preenchido automaticamente</span>
+        </div>
+        <div class="field">
+          <label>Cidade</label>
+          <div class="ss-wrap" id="ss-cidade">
+            <input class="ss-input" type="text" id="cidade-search" placeholder="Digite para buscar..." autocomplete="off"
+              oninput="ssFilter('cidade')" onfocus="ssOpen('cidade')" onblur="ssBlur('cidade')" onkeydown="ssKeydown(event,'cidade')">
+            <input type="hidden" id="cidade" required>
+            <div class="ss-dropdown" id="ss-cidade-list"></div>
+          </div>
+          <span class="autofill-hint" id="hint-cidade">✦ preenchido automaticamente</span>
+        </div>
+        <div class="field">
+          <label>Equipamento(s)</label>
+          <input type="text" id="equipamento" placeholder="Modelo(s)" required>
+          <span class="autofill-hint" id="hint-equipamento">✦ preenchido automaticamente</span>
+        </div>
+        <div class="field">
+          <label>Nº de Série</label>
+          <input type="text" id="numSerie" placeholder="Número de série">
+          <span class="autofill-hint" id="hint-numSerie">✦ preenchido automaticamente</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div class="section">
+      <div class="section-title">Financeiro</div>
+      <div class="section-locked-note" id="lockedNoteFinanceiro">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Preenchido com os dados da primeira inserção desta viagem
+      </div>
+      <div class="g2">
+        <div class="field"><label>Adiantamento (R$)</label><input type="number" id="adiantamento" placeholder="0,00" step="0.01" min="0" required><span class="autofill-hint" id="hint-adiantamento">✦ preenchido automaticamente</span></div>
+        <div class="field"><label>Data das NF's</label><input type="date" id="dataNFs" required></div>
+      </div>
+    </div>
+
+    <!-- DESPESAS SIMPLES -->
+    <div class="section">
+      <div class="section-title">Despesas — Alimentação &amp; Hospedagem</div>
+      <div class="single-grid" id="singleGrid"></div>
+    </div>
+
+    <!-- DESPESAS MÚLTIPLAS -->
+    <div class="section">
+      <div class="section-title">Despesas — Pedágio, Combustível &amp; Outros</div>
+      <div class="multi-wrap" id="multiWrap"></div>
+    </div>
+
+    <!-- ASSINATURA -->
+    <div class="section">
+      <div class="section-title">Assinatura do Técnico</div>
+      <div class="sig-wrap" id="sigWrap">
+        <canvas id="canvasTech"></canvas>
+        <div class="sig-hint" id="sigHint">
+          <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>
+          <span>Assine aqui</span>
+        </div>
+        <div id="sigLockOverlay" style="display:none; position:absolute; inset:0; background:rgba(239,244,255,0.55); cursor:not-allowed; z-index:10; border-radius:inherit;"></div>
+      </div>
+      <div class="sig-actions">
+        <button type="button" class="btn-clear" id="btnClear" onclick="clearCanvas()">✕ Limpar assinatura</button>
+        <label class="check-label" style="margin:0; padding:0.55rem 0.85rem;">
+          <input type="checkbox" id="assinaturaRealizada" onchange="onAssinaturaChange()">
+          <span>Assinatura confirmada</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- OBSERVAÇÕES -->
+    <div class="section">
+      <div class="section-title">Observações</div>
+      <div class="field">
+        <textarea id="observacoes" placeholder="Observações adicionais..."></textarea>
+      </div>
+    </div>
+
+    <div id="messageBox"></div>
+
+    <div class="submit-row">
+      <button type="button" id="saveBtn" onclick="handleSubmit()" class="btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Registrar Acerto de Viagem
+      </button>
+    </div>
+
+  </div><!-- /formContainer -->
+
+  <!-- SUCCESS -->
+  <div id="successScreen">
+    <div class="check-circle">
+      <svg width="36" height="36" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h2>Acerto Registrado!</h2>
+    <p>O acerto de viagem foi enviado com sucesso.</p>
+
+    <div class="success-code-box">
+      <div class="success-code-label">ID da Viagem</div>
+      <div class="success-code-value" id="successCode">—</div>
+      <p class="success-code-hint">
+        ID salvo neste dispositivo.<br>
+        Para adicionar mais acertos a esta viagem, selecione <strong>"Em Andamento"</strong> no próximo envio.
+      </p>
+      <button class="btn-copy" id="btnCopy" onclick="copyCode()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copiar código
+      </button>
+
+      <div class="share-row">
+        <button class="btn-share whatsapp" onclick="shareWhatsApp()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+          </svg>
+          WhatsApp
+        </button>
+        <button class="btn-share email" onclick="shareEmail()">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          E-mail
+        </button>
+      </div>
+    </div>
+  </div>
+
   </div>
 </div>
 
 <script>
+// ─────────────────────────────────────────────
+//  CONFIGURAÇÃO DA API
+//  Aponte para o endereço do seu backend REST
+// ─────────────────────────────────────────────
 const API_BASE = '/api';
 
+// ─────────────────────────────────────────────
+//  HELPERS DE API
+// ─────────────────────────────────────────────
 function getToken() { return localStorage.getItem('acerto_token') || ''; }
 
 async function apiFetch(path, options = {}) {
@@ -139,74 +912,1166 @@ async function apiFetch(path, options = {}) {
     },
     ...options,
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
-function showMsg(text) {
-  const box = document.getElementById('msgBox');
-  box.textContent = text;
-  box.style.display = 'block';
-}
-
-function setLoading(v) {
-  document.getElementById('btnLogin').disabled = v;
-  document.getElementById('spinner').style.display = v ? 'block' : 'none';
-  document.getElementById('btnLabel').textContent = v ? 'Entrando...' : 'Entrar';
-}
-
-// Verifica se já está autenticado ao carregar
+// ─────────────────────────────────────────────
+//  INICIALIZAÇÃO
+// ─────────────────────────────────────────────
 window.addEventListener('load', async () => {
-  const token = getToken();
-  if (token) {
-    try {
-      const me = await apiFetch('/auth/me');
-      window.location.href = me.role === 'admin' ? 'dashboard.html' : 'index.html';
-      return;
-    } catch (e) {
-      localStorage.removeItem('acerto_token');
+  // Verifica token JWT — redireciona para login se não autenticado
+  try {
+    if (!getToken()) throw new Error('sem token');
+    const me = await apiFetch('/auth/me');
+    // Preenche e trava o campo técnico com o usuário logado
+    const sel = document.getElementById('tecnico');
+    if (sel) {
+      // Garante que a option existe
+      let opt = Array.from(sel.options).find(o => o.text === me.nome);
+      if (!opt) {
+        opt = new Option(me.nome, me.nome);
+        sel.appendChild(opt);
+      }
+      sel.value = opt.value;
+      sel.readOnly = true;
+      sel.style.pointerEvents = 'none';
+      sel.style.opacity = '0.75';
+    }
+    // Mostra nome do usuário no header
+    const headerP = document.querySelector('.card-header p');
+    if (headerP) headerP.innerHTML =
+      `Olá, <strong style="color:#fff">${me.nome}</strong> &nbsp;·&nbsp; <a href="#" onclick="fazerLogout()" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.78rem;">Sair</a>`;
+  } catch (e) {
+    window.location.href = 'login.html';
+    return;
+  }
+  await carregarClientes();
+  await _restaurarDraft();
+  _conectarAutosave();
+});
+
+async function fazerLogout() {
+  localStorage.removeItem('acerto_token');
+  window.location.href = 'login.html';
+}
+
+// ─────────────────────────────────────────────
+//  CÓDIGO DA VIAGEM — localStorage
+// ─────────────────────────────────────────────
+const LS_KEY       = 'acerto_ultimo_viagem_id';
+const LS_DRAFT_KEY = 'acerto_draft_v1';
+
+function salvarViagemId(id) {
+  try { localStorage.setItem(LS_KEY, String(id)); } catch (e) {}
+}
+
+// ─────────────────────────────────────────────
+//  PERSISTÊNCIA DO RASCUNHO
+// ─────────────────────────────────────────────
+const DRAFT_TEXT_IDS = [
+  'tecnico','auxiliares','dataInicio','veiculo',
+  'servicoPrestado','statusViagem','cliente','cidade','equipamento','numSerie',
+  'adiantamento','dataNFs','observacoes'
+];
+
+function _lerDraft() {
+  try { return JSON.parse(localStorage.getItem(LS_DRAFT_KEY) || 'null'); } catch(e) { return null; }
+}
+
+function _gravarDraft() {
+  try {
+    const draft = {};
+    const modeEl = document.querySelector('input[name="tripMode"]:checked');
+    draft.tripMode = modeEl ? modeEl.value : 'nova';
+    draft.viagemSelecionada = _viagemSelecionada || null;
+    DRAFT_TEXT_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) draft[id] = el.value;
+    });
+    draft.autofillActive = AUTOFILL_FIELDS.filter(id => {
+      const el = document.getElementById(id);
+      return el && el.classList.contains('autofilled');
+    });
+    draft.signature = (!isBlank()) ? canvas.toDataURL('image/png') : '';
+    draft.singles = {};
+    SINGLES.forEach(({ key }) => {
+      const valorEl = document.getElementById(`valor-${key}`);
+      draft.singles[key] = {
+        valor: valorEl ? valorEl.value : '',
+        pay:   getRadioVal(`pay-${key}`),
+        b64:   _draftFiles[`single-${key}`] || '',
+        fname: _draftFileNames[`single-${key}`] || ''
+      };
+    });
+    draft.multis = {};
+    MULTIS.forEach(({ key }) => {
+      draft.multis[key] = [];
+      for (let i = 1; i <= SLOTS; i++) {
+        const sid = `${key}-${i}`;
+        const vEl = document.getElementById(`slotvalor-${sid}`);
+        draft.multis[key].push({
+          slot:  i,
+          valor: vEl ? vEl.value : '',
+          pay:   getRadioVal(`slotpay-${sid}`),
+          b64:   _draftFiles[`multi-${sid}`] || '',
+          fname: _draftFileNames[`multi-${sid}`] || ''
+        });
+      }
+    });
+    localStorage.setItem(LS_DRAFT_KEY, JSON.stringify(draft));
+  } catch(e) {
+    console.warn('Erro ao gravar rascunho:', e);
+  }
+}
+
+function _limparDraft() {
+  try { localStorage.removeItem(LS_DRAFT_KEY); } catch(e) {}
+  _draftFiles     = {};
+  _draftFileNames = {};
+}
+
+let _draftFiles     = {};
+let _draftFileNames = {};
+
+async function _capturarArquivo(mapKey, file) {
+  if (!file) {
+    delete _draftFiles[mapKey];
+    delete _draftFileNames[mapKey];
+    _gravarDraft();
+    return;
+  }
+  try {
+    const b64 = await fileToB64(file);
+    _draftFiles[mapKey]     = b64;
+    _draftFileNames[mapKey] = file.name;
+  } catch(e) {
+    console.warn('Erro ao ler arquivo para rascunho:', e);
+  }
+  _gravarDraft();
+}
+
+function _restaurarArquivoInput(inputEl, b64, fname) {
+  if (!b64 || !fname) return false;
+  try {
+    const arr  = b64.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    const u8   = new Uint8Array(bstr.length);
+    for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
+    const file = new File([u8], fname, { type: mime });
+    const dt   = new DataTransfer();
+    dt.items.add(file);
+    inputEl.files = dt.files;
+    return true;
+  } catch(e) {
+    console.warn('Erro ao restaurar arquivo:', e);
+    return false;
+  }
+}
+
+function _restaurarCanvas(dataUrl) {
+  if (!dataUrl) return;
+  const img = new Image();
+  img.onload = () => {
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    hasSig = true;
+    hint.style.opacity = '0';
+  };
+  img.src = dataUrl;
+}
+
+async function _restaurarDraft() {
+  const draft = _lerDraft();
+  if (!draft) return;
+
+  if (draft.tripMode) {
+    const radioEl = document.querySelector(`input[name="tripMode"][value="${draft.tripMode}"]`);
+    if (radioEl) radioEl.checked = true;
+  }
+
+  DRAFT_TEXT_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && draft[id] !== undefined) el.value = draft[id];
+  });
+
+  // Restaura cascata cliente → cidade após carregar opções
+  if (draft.cliente && _todosClientes.length) {
+    ssSelect('cliente', draft.cliente);
+    if (draft.cidade) setTimeout(() => ssSelect('cidade', draft.cidade), 0);
+  }
+
+  if (draft.singles) {
+    for (const { key } of SINGLES) {
+      const s = draft.singles[key];
+      if (!s) continue;
+      const fi      = document.getElementById(`file-${key}`);
+      const valorEl = document.getElementById(`valor-${key}`);
+      const card    = document.getElementById(`expcard-${key}`);
+      const lblEl   = document.getElementById(`lbl-${key}`);
+      if (valorEl && s.valor) valorEl.value = s.valor;
+      if (s.b64 && s.fname && fi) {
+        _draftFiles[`single-${key}`]     = s.b64;
+        _draftFileNames[`single-${key}`] = s.fname;
+        if (_restaurarArquivoInput(fi, s.b64, s.fname)) {
+          card?.classList.add('has-file');
+          if (lblEl) lblEl.textContent = s.fname;
+        }
+      }
+      if (s.pay) {
+        const radioEl = document.querySelector(`input[name="pay-${key}"][value="${s.pay}"]`);
+        if (radioEl) {
+          radioEl.checked = true;
+          const payBtn = radioEl.closest('.pay-btn');
+          const payRow = radioEl.closest('.pay-row');
+          if (payRow) payRow.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('sel-pix','sel-corp'));
+          if (payBtn) { const opt = PAY.find(p => p.value === s.pay); if (opt) payBtn.classList.add(opt.cls); }
+        }
+      }
     }
   }
 
-  // Carrega lista de usuários
-  try {
-    const usuarios = await apiFetch('/auth/usuarios');
-    const sel = document.getElementById('selectUsuario');
-    sel.innerHTML = '<option value="">Selecione seu nome...</option>';
-    usuarios.forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.id;
-      opt.textContent = u.nome;
-      sel.appendChild(opt);
-    });
-  } catch (e) {
-    document.getElementById('selectUsuario').innerHTML = '<option value="">Erro ao carregar usuários</option>';
+  if (draft.multis) {
+    for (const { key } of MULTIS) {
+      const slots = draft.multis[key];
+      if (!slots) continue;
+      for (const s of slots) {
+        const sid    = `${key}-${s.slot}`;
+        const fi     = document.getElementById(`slotfile-${sid}`);
+        const vEl    = document.getElementById(`slotvalor-${sid}`);
+        const slbl   = document.getElementById(`slotlbl-${sid}`);
+        const slotEl = document.getElementById(`slot-${sid}`);
+        if (vEl && s.valor) vEl.value = s.valor;
+        if (s.b64 && s.fname && fi) {
+          _draftFiles[`multi-${sid}`]     = s.b64;
+          _draftFileNames[`multi-${sid}`] = s.fname;
+          if (_restaurarArquivoInput(fi, s.b64, s.fname)) {
+            slotEl?.classList.add('has-file');
+            if (slbl) slbl.textContent = s.fname;
+          }
+        }
+        if (s.pay) {
+          const radioEl = document.querySelector(`input[name="slotpay-${sid}"][value="${s.pay}"]`);
+          if (radioEl) {
+            radioEl.checked = true;
+            const payBtn = radioEl.closest('.pay-btn');
+            const payRow = radioEl.closest('.pay-row');
+            if (payRow) payRow.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('sel-pix','sel-corp'));
+            if (payBtn) { const opt = PAY.find(p => p.value === s.pay); if (opt) payBtn.classList.add(opt.cls); }
+          }
+        }
+      }
+      updateMultiTotal(key);
+    }
   }
+
+  if (draft.autofillActive && draft.autofillActive.length > 0) {
+    draft.autofillActive.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('autofilled');
+      el.readOnly = true;
+      if (el.tagName === 'SELECT') el.style.pointerEvents = 'none';
+    });
+  }
+
+  if (draft.viagemSelecionada) {
+    _viagemSelecionada = draft.viagemSelecionada;
+    const v = draft.viagemSelecionada;
+    document.getElementById('bannerCodigoVal').textContent = '#' + v.id;
+    const parts = [v.tecnico, v.cliente, v.cidade].filter(Boolean);
+    document.getElementById('bannerInfoExtra').textContent = parts.join(' · ');
+    document.getElementById('bannerVinculado').style.display = 'flex';
+  }
+
+  const panel = document.getElementById('andamentoPanel');
+  if (draft.tripMode === 'andamento') {
+    panel.classList.add('show');
+    carregarViagens();
+  } else {
+    panel.classList.remove('show');
+  }
+
+  if (draft.signature) {
+    setTimeout(() => _restaurarCanvas(draft.signature), 120);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  TOGGLE NOVA / EM ANDAMENTO
+// ─────────────────────────────────────────────
+function onModeChange() {
+  const modo  = document.querySelector('input[name="tripMode"]:checked').value;
+  const panel = document.getElementById('andamentoPanel');
+  if (modo === 'andamento') {
+    panel.classList.add('show');
+    carregarViagens();
+  } else {
+    panel.classList.remove('show');
+    _viagemSelecionada = null;
+    _limparAutofill();
+  }
+  _gravarDraft();
+}
+
+// ─────────────────────────────────────────────
+//  LISTA DE VIAGENS DA API
+// ─────────────────────────────────────────────
+let _viagemSelecionada = null;
+async function carregarViagens() {
+  const container = document.getElementById('tripListContainer');
+  container.innerHTML = `<div class="trip-list-loading"><div class="spin-sm"></div> Carregando viagens...</div>`;
+  try {
+    const viagens = await apiFetch('/viagens');
+    if (!viagens || viagens.length === 0) {
+      container.innerHTML = `<div class="trip-list-empty">Nenhuma viagem encontrada.<br>Selecione <strong>"Nova Viagem"</strong> para iniciar.</div>`;
+      return;
+    }
+    const emAndamento = viagens.filter(v => v.status !== 'Finalizada');
+    if (emAndamento.length === 0) {
+      container.innerHTML = `<div class="trip-list-empty">Nenhuma viagem em andamento.<br>Todas as viagens foram finalizadas ou selecione <strong>"Nova Viagem"</strong>.</div>`;
+      return;
+    }
+    renderTripList(emAndamento);
+  } catch (err) {
+    container.innerHTML = `<div class="trip-list-empty" style="color:var(--error)">Erro ao carregar viagens. Verifique a conexão com a API.</div>`;
+    console.error(err);
+  }
+}
+
+function renderTripList(viagens) {
+  const container = document.getElementById('tripListContainer');
+  const list = document.createElement('div');
+  list.className = 'trip-list';
+  viagens.forEach(v => {
+    const item = document.createElement('div');
+    item.className = 'trip-item';
+    const dataFmt = (() => {
+      if (!v.dataInicio) return '';
+      try {
+        const d = new Date(v.dataInicio);
+        if (isNaN(d.getTime())) return String(v.dataInicio).replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1');
+        return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch(e) { return String(v.dataInicio).replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1'); }
+    })();
+    const meta = [v.cidade, dataFmt].filter(Boolean).join(' · ');
+    item.innerHTML =
+      '<div class="trip-item-code">#' + v.id + '</div>' +
+      '<div class="trip-item-name">' + (v.tecnico || '—') + (v.cliente ? ' · ' + v.cliente : '') + '</div>' +
+      (meta ? '<div class="trip-item-meta">' + meta + '</div>' : '');
+    item.addEventListener('click', () => selecionarViagem(v, item));
+    list.appendChild(item);
+  });
+  container.innerHTML = '';
+  container.appendChild(list);
+}
+
+// ─────────────────────────────────────────────
+//  AUTO-PREENCHIMENTO — Equipe / Serviço / Cliente
+// ─────────────────────────────────────────────
+const AUTOFILL_FIELDS = [
+  'tecnico', 'auxiliares', 'dataInicio', 'veiculo',
+  'servicoPrestado', 'statusViagem', 'cliente', 'cidade', 'equipamento', 'numSerie', 'adiantamento'
+];
+const AUTOFILL_SECTIONS = ['lockedNoteEquipe', 'lockedNoteServico', 'lockedNoteCliente', 'lockedNoteFinanceiro'];
+
+// ── Clientes carregados do banco ──────────────────────────────────────────────
+let _todosClientes = []; // [{ nome, cidade }, ...]
+
+async function carregarClientes() {
+  try {
+    _todosClientes = await apiFetch('/clientes');
+    ssSetOptions('cliente', [...new Set(_todosClientes.map(c => c.nome))]);
+    ssSetOptions('cidade',  [...new Set(_todosClientes.map(c => c.cidade).filter(Boolean))]);
+  } catch(e) {
+    console.warn('Erro ao carregar clientes:', e);
+  }
+}
+
+function _filtrarCidades(nomeCliente) {
+  const cidades = _todosClientes
+    .filter(c => c.nome === nomeCliente)
+    .map(c => c.cidade).filter(Boolean);
+  ssSetOptions('cidade', cidades);
+  // Clear current cidade selection when client changes
+  if (document.getElementById('cidade').value) {
+    document.getElementById('cidade').value = '';
+    document.getElementById('cidade-search').value = '';
+  }
+  // Auto-select if only one city — silent to avoid loop
+  if (cidades.length === 1) ssSelect('cidade', cidades[0], true);
+}
+
+// Reverse: filter clientes based on selected cidade
+function _filtrarClientesPorCidade(nomeCidade) {
+  const clientes = _todosClientes
+    .filter(c => c.cidade === nomeCidade)
+    .map(c => c.nome).filter(Boolean);
+  ssSetOptions('cliente', clientes);
+  // Clear current cliente selection when city changes
+  if (document.getElementById('cliente').value) {
+    document.getElementById('cliente').value = '';
+    document.getElementById('cliente-search').value = '';
+  }
+  // Auto-select if only one client — silent to avoid loop
+  if (clientes.length === 1) ssSelect('cliente', clientes[0], true);
+}
+
+// ── Searchable Select engine ──────────────────────────────────────────────────
+const _ssOptions = { cliente: [], cidade: [] };
+let _ssFocused  = { cliente: -1, cidade: -1 };
+
+function ssSetOptions(key, options) {
+  _ssOptions[key] = options;
+}
+
+function ssGetVisible(key) {
+  const q = (document.getElementById(key + '-search').value || '').toLowerCase().trim();
+  return q ? _ssOptions[key].filter(o => o.toLowerCase().includes(q)) : _ssOptions[key];
+}
+
+function ssRenderList(key) {
+  const list    = document.getElementById('ss-' + key + '-list');
+  const visible = ssGetVisible(key);
+  const current = document.getElementById(key).value;
+  _ssFocused[key] = -1;
+
+  if (!visible.length) {
+    list.innerHTML = '<div class="ss-empty">Nenhum resultado</div>';
+    return;
+  }
+  list.innerHTML = visible.slice(0, 200).map((o, i) =>
+    `<div class="ss-option${o === current ? ' selected' : ''}" data-val="${o.replace(/"/g,'&quot;')}"
+      onmousedown="ssSelect('${key}',this.dataset.val)">${o}</div>`
+  ).join('');
+}
+
+function ssOpen(key) {
+  ssRenderList(key);
+  document.getElementById('ss-' + key).classList.add('open');
+}
+
+function ssBlur(key) {
+  // Small delay so onmousedown on option fires first
+  setTimeout(() => {
+    document.getElementById('ss-' + key).classList.remove('open');
+    const hidden = document.getElementById(key);
+    const search = document.getElementById(key + '-search');
+    if (search.value !== hidden.value) {
+      // User cleared the field without selecting — reset both fields to full lists
+      if (!search.value) ssReset(key);
+      else search.value = hidden.value;
+    }
+  }, 150);
+}
+
+function ssReset(key) {
+  // Clears a field and restores both lists to the full dataset
+  document.getElementById(key).value = '';
+  document.getElementById(key + '-search').value = '';
+  document.getElementById('ss-' + key).classList.remove('open');
+  ssSetOptions('cliente', [...new Set(_todosClientes.map(c => c.nome))]);
+  ssSetOptions('cidade',  [...new Set(_todosClientes.map(c => c.cidade).filter(Boolean))]);
+  _gravarDraft();
+}
+
+function ssFilter(key) {
+  // When the user starts typing again after a selection, restore the full list first
+  const hidden = document.getElementById(key);
+  if (hidden.value && !document.getElementById(key + '-search').value) {
+    // Field was cleared — restore full lists so they can pick anything
+    ssSetOptions('cliente', [...new Set(_todosClientes.map(c => c.nome))]);
+    ssSetOptions('cidade',  [...new Set(_todosClientes.map(c => c.cidade).filter(Boolean))]);
+    hidden.value = '';
+  }
+  ssRenderList(key);
+  document.getElementById('ss-' + key).classList.add('open');
+  // Clear hidden value when user types
+  hidden.value = '';
+}
+
+function ssSelect(key, value, silent = false) {
+  document.getElementById(key).value = value;
+  document.getElementById(key + '-search').value = value;
+  document.getElementById('ss-' + key).classList.remove('open');
+  _gravarDraft();
+  if (!silent) {
+    if (key === 'cliente') _filtrarCidades(value);
+    if (key === 'cidade')  _filtrarClientesPorCidade(value);
+  }
+}
+
+function ssKeydown(e, key) {
+  const wrap = document.getElementById('ss-' + key);
+  if (!wrap.classList.contains('open')) { ssOpen(key); return; }
+  const items = wrap.querySelectorAll('.ss-option');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _ssFocused[key] = Math.min(_ssFocused[key] + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _ssFocused[key] = Math.max(_ssFocused[key] - 1, 0);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_ssFocused[key] >= 0) ssSelect(key, items[_ssFocused[key]].dataset.val);
+    return;
+  } else if (e.key === 'Escape') {
+    wrap.classList.remove('open'); return;
+  }
+  items.forEach((el, i) => el.classList.toggle('focused', i === _ssFocused[key]));
+  if (_ssFocused[key] >= 0) items[_ssFocused[key]].scrollIntoView({ block: 'nearest' });
+}
+
+function _normalizarData(val) {
+  if (!val) return '';
+  const match = String(val).match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+}
+
+function _aplicarAutofill(dados) {
+  if (!dados) return;
+  const DATE_FIELDS = ['dataInicio'];
+  AUTOFILL_FIELDS.forEach(id => {
+    const el   = document.getElementById(id);
+    const hint = document.getElementById('hint-' + id);
+    if (!el) return;
+    const v = DATE_FIELDS.includes(id) ? _normalizarData(dados[id]) : (dados[id] || '');
+    el.value = v;
+    if (v) {
+      el.classList.add('autofilled');
+      el.readOnly = true;
+      if (el.tagName === 'SELECT') el.style.pointerEvents = 'none';
+      if (hint) hint.classList.add('visible');
+      // Mirror autofill style on the visible search input (for cliente/cidade)
+      const searchEl = document.getElementById(id + '-search');
+      if (searchEl) { searchEl.value = v; searchEl.classList.add('autofilled'); searchEl.disabled = true; }
+    }
+  });
+
+  // Selects: encontra a opção pelo texto ou valor
+  ['servicoPrestado', 'tecnico', 'statusViagem'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel && dados[id]) {
+      const match = Array.from(sel.options).find(
+        o => o.value === dados[id] || o.text === dados[id]
+      );
+      if (match) sel.value = match.value;
+    }
+  });
+
+  // Cliente e cidade: searchable selects
+  if (dados.cliente) {
+    ssSelect('cliente', dados.cliente);
+    if (dados.cidade) setTimeout(() => ssSelect('cidade', dados.cidade), 0);
+  }
+
+  AUTOFILL_SECTIONS.forEach(id => {
+    const note = document.getElementById(id);
+    if (note) note.classList.add('visible');
+  });
+}
+
+function _limparAutofill() {
+  AUTOFILL_FIELDS.forEach(id => {
+    const el   = document.getElementById(id);
+    const hint = document.getElementById('hint-' + id);
+    if (!el) return;
+    el.classList.remove('autofilled');
+    el.readOnly = false;
+    if (el.tagName === 'SELECT') el.style.pointerEvents = '';
+    if (hint) hint.classList.remove('visible');
+  });
+  // Reset searchable selects back to full lists
+  ['cliente','cidade'].forEach(key => {
+    const searchEl = document.getElementById(key + '-search');
+    if (searchEl) { searchEl.value = ''; searchEl.classList.remove('autofilled'); searchEl.disabled = false; }
+    document.getElementById(key).value = '';
+    const hint = document.getElementById('hint-' + key);
+    if (hint) hint.classList.remove('visible');
+  });
+  // Restore full option lists
+  ssSetOptions('cliente', [...new Set(_todosClientes.map(c => c.nome))]);
+  ssSetOptions('cidade',  [...new Set(_todosClientes.map(c => c.cidade).filter(Boolean))]);
+  AUTOFILL_SECTIONS.forEach(id => {
+    const note = document.getElementById(id);
+    if (note) note.classList.remove('visible');
+  });
+}
+
+async function selecionarViagem(v, itemEl) {
+  document.querySelectorAll('.trip-item').forEach(el => el.classList.remove('selected'));
+  itemEl.classList.add('selected');
+  _viagemSelecionada = v;
+
+  document.getElementById('bannerCodigoVal').textContent = '#' + v.id;
+  const parts = [v.tecnico, v.cliente, v.cidade].filter(Boolean);
+  document.getElementById('bannerInfoExtra').textContent = parts.join(' · ');
+  document.getElementById('bannerVinculado').style.display = 'flex';
+
+  _limparAutofill();
+  try {
+    const dados = await apiFetch(`/viagens/${v.id}`);
+    _aplicarAutofill(dados);
+  } catch(e) {
+    console.warn('Não foi possível buscar dados da viagem:', e);
+  }
+  _gravarDraft();
+}
+
+
+onModeChange();
+
+// ─────────────────────────────────────────────
+//  PAYMENT FLAG BUILDER
+// ─────────────────────────────────────────────
+const PAY = [
+  { value: 'dinheiro_pix', label: 'Dinheiro / Pix',    cls: 'sel-pix'  },
+  { value: 'cartao_corp',  label: 'Cartão Corporativo', cls: 'sel-corp' },
+];
+
+function buildPayRow(radioName, extraClass) {
+  const div = document.createElement('div');
+  div.className = `pay-row ${extraClass || ''}`;
+  PAY.forEach(opt => {
+    const lbl = document.createElement('label');
+    lbl.className = 'pay-btn';
+    lbl.dataset.cls = opt.cls;
+    lbl.innerHTML = `<input type="radio" name="${radioName}" value="${opt.value}"> ${opt.label}`;
+    lbl.addEventListener('click', () => {
+      div.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('sel-pix','sel-corp'));
+      lbl.querySelector('input').checked = true;
+      lbl.classList.add(opt.cls);
+      _gravarDraft();
+    });
+    div.appendChild(lbl);
+  });
+  return div;
+}
+
+function getRadioVal(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : '';
+}
+
+// ─────────────────────────────────────────────
+//  SINGLE EXPENSE CARDS
+// ─────────────────────────────────────────────
+const SINGLES = [
+  { key: 'cafe',   label: 'Café'   },
+  { key: 'almoco', label: 'Almoço' },
+  { key: 'janta',  label: 'Janta'  },
+  { key: 'hotel',  label: 'Hotel'  },
+];
+
+const singleGrid = document.getElementById('singleGrid');
+
+SINGLES.forEach(({ key, label }) => {
+  const card = document.createElement('div');
+  card.className = 'exp-card';
+  card.id = `expcard-${key}`;
+
+  const title = document.createElement('div');
+  title.className = 'exp-card-title';
+  title.textContent = label;
+
+  const zone = document.createElement('label');
+  zone.className = 'upload-zone';
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.id   = `file-${key}`;
+  fileInput.accept = 'image/*,.pdf';
+
+  const icon = document.createElement('div');
+  icon.className = 'upload-icon';
+  icon.innerHTML = '<svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'upload-lbl';
+  lbl.id = `lbl-${key}`;
+  lbl.innerHTML = 'Clique para anexar<br>imagem ou PDF';
+
+  zone.appendChild(fileInput);
+  zone.appendChild(icon);
+  zone.appendChild(lbl);
+
+  const valorWrap = document.createElement('div');
+  valorWrap.className = 'exp-valor';
+  const valorPrefix = document.createElement('span');
+  valorPrefix.className = 'exp-valor-prefix';
+  valorPrefix.textContent = 'R$';
+  const valorInput = document.createElement('input');
+  valorInput.type = 'number';
+  valorInput.id = `valor-${key}`;
+  valorInput.placeholder = '0,00';
+  valorInput.step = '0.01';
+  valorInput.min = '0';
+  valorWrap.appendChild(valorPrefix);
+  valorWrap.appendChild(valorInput);
+
+  const payRow = buildPayRow(`pay-${key}`, 'exp-pay');
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) {
+      card.classList.add('has-file');
+      lbl.textContent = fileInput.files[0].name;
+    } else {
+      card.classList.remove('has-file');
+      lbl.innerHTML = 'Clique para anexar<br>imagem ou PDF';
+      valorInput.value = '';
+    }
+    _capturarArquivo(`single-${key}`, fileInput.files[0] || null);
+  });
+  valorInput.addEventListener('input', _gravarDraft);
+
+  card.appendChild(title);
+  card.appendChild(zone);
+  card.appendChild(valorWrap);
+  card.appendChild(payRow);
+  singleGrid.appendChild(card);
 });
 
-document.getElementById('inputSenha').addEventListener('keydown', e => {
-  if (e.key === 'Enter') fazerLogin();
+// ─────────────────────────────────────────────
+//  MULTI SLOTS
+// ─────────────────────────────────────────────
+const MULTIS = [
+  { key: 'pedagio',     label: 'Pedágio'    },
+  { key: 'combustivel', label: 'Combustível' },
+  { key: 'outros',      label: 'Outros'      },
+];
+const SLOTS = 15;
+const multiWrap = document.getElementById('multiWrap');
+
+MULTIS.forEach(({ key, label }) => {
+  const group  = document.createElement('div');
+  const glabel = document.createElement('div');
+  glabel.className = 'multi-group-label';
+  glabel.textContent = label;
+
+  const grid = document.createElement('div');
+  grid.className = 'slots-grid';
+
+  for (let i = 1; i <= SLOTS; i++) {
+    const sid  = `${key}-${i}`;
+    const slot = document.createElement('div');
+    slot.className = 'slot-card';
+    slot.id = `slot-${sid}`;
+
+    const num = document.createElement('div');
+    num.className = 'slot-num';
+    num.textContent = `#${String(i).padStart(2,'0')}`;
+
+    const zone = document.createElement('label');
+    zone.className = 'slot-upload';
+
+    const fi = document.createElement('input');
+    fi.type   = 'file';
+    fi.id     = `slotfile-${sid}`;
+    fi.accept = 'image/*,.pdf';
+
+    const sicon = document.createElement('div');
+    sicon.className = 'slot-icon';
+    sicon.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+
+    const slbl = document.createElement('div');
+    slbl.className = 'slot-lbl';
+    slbl.id = `slotlbl-${sid}`;
+    slbl.textContent = 'Anexar';
+
+    zone.appendChild(fi);
+    zone.appendChild(sicon);
+    zone.appendChild(slbl);
+
+    const valorRow = document.createElement('div');
+    valorRow.className = 'slot-valor';
+    const vPrefix = document.createElement('span');
+    vPrefix.className = 'slot-valor-prefix';
+    vPrefix.textContent = 'R$';
+    const vInput = document.createElement('input');
+    vInput.type = 'number';
+    vInput.id = `slotvalor-${sid}`;
+    vInput.placeholder = '0,00';
+    vInput.step = '0.01';
+    vInput.min = '0';
+    valorRow.appendChild(vPrefix);
+    valorRow.appendChild(vInput);
+
+    const payRow = buildPayRow(`slotpay-${sid}`, 'slot-pay');
+
+    fi.addEventListener('change', () => {
+      if (fi.files[0]) {
+        slot.classList.add('has-file');
+        slbl.textContent = fi.files[0].name;
+      } else {
+        slot.classList.remove('has-file');
+        slbl.textContent = 'Anexar';
+        vInput.value = '';
+      }
+      updateMultiTotal(key);
+      _capturarArquivo(`multi-${sid}`, fi.files[0] || null);
+    });
+
+    vInput.addEventListener('input', () => { updateMultiTotal(key); _gravarDraft(); });
+
+    slot.appendChild(num);
+    slot.appendChild(zone);
+    slot.appendChild(valorRow);
+    slot.appendChild(payRow);
+    grid.appendChild(slot);
+  }
+
+  const totalEl = document.createElement('div');
+  totalEl.className = 'multi-total';
+  totalEl.id = `total-${key}`;
+  totalEl.innerHTML = `<span class="multi-total-label">Total ${label}</span><span class="multi-total-val" id="totalval-${key}">R$ 0,00</span>`;
+
+  group.appendChild(glabel);
+  group.appendChild(grid);
+  group.appendChild(totalEl);
+  multiWrap.appendChild(group);
 });
 
-async function fazerLogin() {
-  const usuarioId = document.getElementById('selectUsuario').value;
-  const senha     = document.getElementById('inputSenha').value;
+function updateMultiTotal(key) {
+  let soma = 0;
+  for (let i = 1; i <= SLOTS; i++) {
+    const sid    = `${key}-${i}`;
+    const fi     = document.getElementById(`slotfile-${sid}`);
+    const vInput = document.getElementById(`slotvalor-${sid}`);
+    if (fi && fi.files[0] && vInput) soma += parseFloat(vInput.value) || 0;
+  }
+  const el = document.getElementById(`totalval-${key}`);
+  if (el) el.textContent = `R$ ${soma.toFixed(2).replace('.', ',')}`;
+}
 
-  document.getElementById('msgBox').style.display = 'none';
+// ─────────────────────────────────────────────
+//  ASSINATURA
+// ─────────────────────────────────────────────
+const canvas  = document.getElementById('canvasTech');
+const ctx     = canvas.getContext('2d');
+const hint    = document.getElementById('sigHint');
+let drawing   = false, hasSig = false;
+let lastX = 0, lastY = 0;
 
-  if (!usuarioId) { showMsg('Selecione seu nome.'); return; }
-  if (!senha)     { showMsg('Digite sua senha.'); return; }
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#1b2537';
+  ctx.lineWidth   = 2.2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  if (e.touches) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+function startDraw(e) {
+  if (_sigLocked) return;
+  drawing = true; hasSig = true;
+  const p = getPos(e); lastX = p.x; lastY = p.y;
+  hint.style.opacity = '0';
+}
+function draw(e) {
+  if (!drawing || _sigLocked) return;
+  const p = getPos(e);
+  ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke();
+  lastX = p.x; lastY = p.y;
+}
+function stopDraw() { drawing = false; if (hasSig) _gravarDraft(); }
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup',   stopDraw);
+canvas.addEventListener('mouseout',  stopDraw);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e); });
+canvas.addEventListener('touchmove',  e => { e.preventDefault(); draw(e); });
+canvas.addEventListener('touchend',   stopDraw);
+
+let _sigLocked = false;
+
+function onAssinaturaChange() {
+  _sigLocked = document.getElementById('assinaturaRealizada').checked;
+  const overlay  = document.getElementById('sigLockOverlay');
+  const wrap     = document.getElementById('sigWrap');
+  const btnClear = document.getElementById('btnClear');
+  overlay.style.display = _sigLocked ? 'block' : 'none';
+  wrap.classList.toggle('locked', _sigLocked);
+  btnClear.disabled = _sigLocked;
+  btnClear.style.opacity = _sigLocked ? '0.35' : '1';
+  btnClear.style.cursor  = _sigLocked ? 'not-allowed' : 'pointer';
+  _gravarDraft();
+}
+
+function clearCanvas() {
+  if (_sigLocked) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasSig = false; hint.style.opacity = '1'; resizeCanvas();
+  _gravarDraft();
+}
+function isBlank() {
+  if (!hasSig) return true;
+  const b = document.createElement('canvas'); b.width = canvas.width; b.height = canvas.height;
+  return canvas.toDataURL() === b.toDataURL();
+}
+
+// ─────────────────────────────────────────────
+//  UI
+// ─────────────────────────────────────────────
+const messageBox = document.getElementById('messageBox');
+
+function showMessage(text, type) {
+  messageBox.textContent = text;
+  const bg     = type === 'error' ? '#fff1f1' : '#f0fdf4';
+  const color  = type === 'error' ? '#c8000a' : '#14803c';
+  const border = type === 'error' ? '#fecaca' : '#bbf7d0';
+  messageBox.style.cssText = 'display:block;padding:0.75rem 1rem;border-radius:10px;font-size:0.875rem;font-weight:500;margin-bottom:1rem;background:' + bg + ';color:' + color + ';border:1px solid ' + border + ';';
+  messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function setLoading(v) {
+  document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none';
+  document.getElementById('saveBtn').disabled = v;
+}
+
+let _viagemIdFinal = null;
+
+function showSuccess(viagemId) {
+  _viagemIdFinal = viagemId;
+  salvarViagemId(viagemId);
+  _limparDraft();
+  document.getElementById('successCode').textContent = '#' + viagemId;
+  document.getElementById('formContainer').style.display = 'none';
+  document.getElementById('successScreen').style.display = 'flex';
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(String(_viagemIdFinal)).then(() => {
+    const btn = document.getElementById('btnCopy');
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Copiado!`;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar ID`;
+    }, 2500);
+  });
+}
+
+function _buildShareText() {
+  const tecnico  = document.getElementById('tecnico')?.value  || '';
+  const cliente  = document.getElementById('cliente')?.value.trim()  || '';
+  const cidade   = document.getElementById('cidade')?.value.trim()   || '';
+  const veiculo  = document.getElementById('veiculo')?.value.trim()  || '';
+  const servico  = document.getElementById('servicoPrestado')?.value || '';
+  const data     = document.getElementById('dataInicio')?.value      || '';
+  let txt = `✅ *Acerto de Viagem Registrado*\n`;
+  txt += `\n*ID da Viagem:* #${_viagemIdFinal}`;
+  if (tecnico) txt += `\n*Técnico:* ${tecnico}`;
+  if (cliente) txt += `\n*Cliente:* ${cliente}`;
+  if (cidade)  txt += `\n*Cidade:* ${cidade}`;
+  if (veiculo) txt += `\n*Veículo:* ${veiculo}`;
+  if (servico) txt += `\n*Serviço:* ${servico}`;
+  if (data)    txt += `\n*Data de início:* ${data}`;
+  return txt;
+}
+
+function shareWhatsApp() {
+  window.open(`https://wa.me/?text=${encodeURIComponent(_buildShareText())}`, '_blank');
+}
+function shareEmail() {
+  const text    = _buildShareText().replace(/\*/g, '');
+  const subject = encodeURIComponent(`Acerto de Viagem — #${_viagemIdFinal}`);
+  window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(text)}`;
+}
+
+function val(id) { return document.getElementById(id).value.trim(); }
+
+// Converte File para base64 (usado apenas localmente para rascunho/draft)
+function fileToB64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file);
+  });
+}
+
+// Envia um arquivo ao server.js, que repassa ao GAS server-side (sem CORS).
+async function uploadParaDrive({ file, viagemId, dataNFs, categoria, slot = null }) {
+  const b64 = await fileToB64(file);
+  const result = await apiFetch('/upload', {
+    method: 'POST',
+    body: JSON.stringify({ viagemId, dataNFs, categoria, slot, arquivo: b64 }),
+  });
+  if (!result.link) throw new Error('Upload não retornou link');
+  return result.link;
+}
+
+// ─────────────────────────────────────────────
+//  AUTOSAVE
+// ─────────────────────────────────────────────
+function _conectarAutosave() {
+  DRAFT_TEXT_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', _gravarDraft);
+    if (el) el.addEventListener('change', _gravarDraft);
+  });
+  document.querySelectorAll('input[name="tripMode"]').forEach(r => r.addEventListener('change', _gravarDraft));
+}
+
+// ─────────────────────────────────────────────
+//  SUBMIT → POST /api/acertos
+// ─────────────────────────────────────────────
+async function handleSubmit() {
+  messageBox.style.display = 'none';
+  if (!val('tecnico'))         { showMessage('Selecione o nome do técnico.', 'error'); return; }
+  if (!val('dataInicio'))      { showMessage('Informe a data de início do serviço.', 'error'); return; }
+  if (!val('veiculo'))         { showMessage('Informe o veículo utilizado.', 'error'); return; }
+  if (!val('servicoPrestado')) { showMessage('Selecione o serviço prestado.', 'error'); return; }
+  if (!val('statusViagem'))    { showMessage('Selecione o status da viagem.', 'error'); return; }
+  if (!val('cliente'))         { showMessage('Informe o nome do cliente.', 'error'); return; }
+  if (!val('cidade'))          { showMessage('Informe a cidade.', 'error'); return; }
+  if (!val('equipamento'))     { showMessage('Informe o(s) equipamento(s).', 'error'); return; }
+  if (!val('adiantamento') && document.getElementById('adiantamento').value === '') { showMessage('Informe o adiantamento (pode ser 0).', 'error'); return; }
+  if (!val('dataNFs'))         { showMessage('Informe a data das NF\'s.', 'error'); return; }
+  if (isBlank())               { showMessage('Desenhe a assinatura do técnico.', 'error'); return; }
+
+  const modo = document.querySelector('input[name="tripMode"]:checked').value;
+  let viagemId = null;
+  if (modo === 'andamento') {
+    if (_viagemSelecionada) {
+      viagemId = _viagemSelecionada.id;
+    } else {
+      showMessage('Selecione uma viagem em andamento da lista.', 'error');
+      return;
+    }
+  }
 
   setLoading(true);
+
+  const dataNFs = val('dataNFs');
+
+  // ── Passo 1: garantir viagemId real antes dos uploads ────────
+  // Para "Nova Viagem", cria a viagem no banco agora para obter o ID real,
+  // evitando pastas com nomes temporários no Drive.
+  if (!viagemId) {
+    try {
+      const criada = await apiFetch('/viagens/criar', {
+        method: 'POST',
+        body: JSON.stringify({
+          tecnico:         val('tecnico'),
+          auxiliares:      val('auxiliares'),
+          dataInicio:      val('dataInicio'),
+          veiculo:         val('veiculo'),
+          servicoPrestado: val('servicoPrestado'),
+          statusViagem:    val('statusViagem'),
+          cliente:         val('cliente'),
+          cidade:          val('cidade'),
+          equipamento:     val('equipamento'),
+          numSerie:        val('numSerie'),
+          adiantamento:    val('adiantamento'),
+        }),
+      });
+      viagemId = criada.viagemId;
+    } catch (e) {
+      showMessage('Erro ao criar viagem. Verifique a conexão com a API.', 'error');
+      setLoading(false); return;
+    }
+  }
+
+  // ── Passo 2: upload dos arquivos usando o ID real ─────────
+  const singleData = {};
+  for (const { key } of SINGLES) {
+    const fi = document.getElementById(`file-${key}`);
+    let link = '';
+    if (fi.files[0]) {
+      try {
+        link = await uploadParaDrive({ file: fi.files[0], viagemId, dataNFs, categoria: key });
+      } catch (e) {
+        showMessage(`Erro ao enviar arquivo "${key}" para o Drive.`, 'error');
+        setLoading(false); return;
+      }
+    }
+    singleData[key] = {
+      file:  link,
+      pay:   getRadioVal(`pay-${key}`),
+      valor: document.getElementById(`valor-${key}`)?.value || '',
+    };
+  }
+
+  const multiData = {};
+  const totais    = {};
+  for (const { key } of MULTIS) {
+    multiData[key] = [];
+    let soma = 0;
+    for (let i = 1; i <= SLOTS; i++) {
+      const sid = `${key}-${i}`;
+      const fi  = document.getElementById(`slotfile-${sid}`);
+      const v   = document.getElementById(`slotvalor-${sid}`)?.value || '';
+      if (fi.files[0]) {
+        soma += parseFloat(v) || 0;
+        let link = '';
+        try {
+          link = await uploadParaDrive({ file: fi.files[0], viagemId, dataNFs, categoria: key, slot: i });
+        } catch (e) {
+          showMessage(`Erro ao enviar arquivo "${key} #${i}" para o Drive.`, 'error');
+          setLoading(false); return;
+        }
+        multiData[key].push({ slot: i, file: link, pay: getRadioVal(`slotpay-${sid}`), valor: v });
+      }
+    }
+    totais[key] = soma.toFixed(2);
+  }
+
+  // ── Passo 3: upload da assinatura para o Drive ──────────
+  let sigLink = '';
+  if (!isBlank()) {
+    try {
+      const sigBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      sigLink = await uploadParaDrive({ file: sigBlob, viagemId, dataNFs, categoria: 'assinatura' });
+    } catch (e) {
+      showMessage('Erro ao enviar assinatura para o Drive.', 'error');
+      setLoading(false); return;
+    }
+  }
+
+  // ── Passo 4: monta payload para o envio ───────────────────
+  const payload = {
+    viagemId,
+    tecnico:             val('tecnico'),
+    auxiliares:          val('auxiliares'),
+    dataInicio:          val('dataInicio'),
+    veiculo:             val('veiculo'),
+    servicoPrestado:     val('servicoPrestado'),
+    statusViagem:        val('statusViagem'),
+    cliente:             val('cliente'),
+    cidade:              val('cidade'),
+    equipamento:         val('equipamento'),
+    numSerie:            val('numSerie'),
+    adiantamento:        val('adiantamento'),
+    dataNFs:             dataNFs,
+    despesas:            { single: singleData, multi: multiData },
+    totais,
+    observacoes:         val('observacoes'),
+    signature:           sigLink,
+  };
+
   try {
-    const me = await apiFetch('/auth/login', {
+    await apiFetch('/acertos', {
       method: 'POST',
-      body: JSON.stringify({ usuarioId: parseInt(usuarioId), senha }),
+      body: JSON.stringify(payload),
     });
-    localStorage.setItem('acerto_token', me.token);
-    window.location.href = me.role === 'admin' ? 'dashboard.html' : 'index.html';
-  } catch (e) {
-    showMsg(e.message || 'Erro ao fazer login.');
+    showSuccess(viagemId);
+  } catch (err) {
+    showMessage('Erro ao enviar. Verifique a conexão com a API e tente novamente.', 'error');
+    console.error(err);
+  } finally {
     setLoading(false);
   }
 }

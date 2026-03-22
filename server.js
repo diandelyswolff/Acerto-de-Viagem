@@ -26,7 +26,7 @@ app.use(cors({
 }));
 
 // Responde preflights explicitamente (necessário para cookies cross-origin)
-app.options('*', cors());
+app.options('/{*path}', cors());
 app.use(express.json({ limit: '20mb' }));
 
 // Sessão httpOnly — cookie seguro, não acessível por JS no browser

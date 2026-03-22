@@ -127,10 +127,16 @@
 <script>
 const API_BASE = '/api';
 
+function getToken() { return localStorage.getItem('acerto_token') || ''; }
+
 async function apiFetch(path, options = {}) {
+  const token = getToken();
   const res = await fetch(API_BASE + path, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+      ...(options.headers || {}),
+    },
     ...options,
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
@@ -151,13 +157,15 @@ function setLoading(v) {
 
 // Verifica se já está autenticado ao carregar
 window.addEventListener('load', async () => {
-  try {
-    const me = await apiFetch('/auth/me');
-    // Já logado — redireciona conforme o role
-    window.location.href = me.role === 'admin' ? 'dashboard.html' : 'index.html';
-    return;
-  } catch (e) {
-    // Não autenticado — continua na tela de login
+  const token = getToken();
+  if (token) {
+    try {
+      const me = await apiFetch('/auth/me');
+      window.location.href = me.role === 'admin' ? 'dashboard.html' : 'index.html';
+      return;
+    } catch (e) {
+      localStorage.removeItem('acerto_token');
+    }
   }
 
   // Carrega lista de usuários
@@ -195,7 +203,7 @@ async function fazerLogin() {
       method: 'POST',
       body: JSON.stringify({ usuarioId: parseInt(usuarioId), senha }),
     });
-    // Redireciona conforme o role
+    localStorage.setItem('acerto_token', me.token);
     window.location.href = me.role === 'admin' ? 'dashboard.html' : 'index.html';
   } catch (e) {
     showMsg(e.message || 'Erro ao fazer login.');

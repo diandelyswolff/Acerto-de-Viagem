@@ -85,8 +85,9 @@ app.get('/api/viagens', requireAuth, async (req, res) => {
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
       WHERE v.status = 'Em Andamento'
+        AND v.usuario_id = $1
       ORDER BY v.created_at DESC
-    `);
+    `, [req.usuario.id]);
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -206,6 +207,12 @@ app.get('/api/viagens/:id', requireAuth, async (req, res) => {
       WHERE v.id = $1
     `, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Viagem não encontrada' });
+
+    // Técnico só pode ver as próprias viagens; admin vê todas
+    if (req.usuario.role !== 'admin' && rows[0].tecnico !== req.usuario.nome) {
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
@@ -390,7 +397,20 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
       ]);
       viagemId = v.id;
     } else {
-      // Viagem existente: atualiza status sempre que vier no payload
+      // Viagem existente: verifica se pertence ao usuário autenticado
+      const { rows: ownership } = await client.query(
+        'SELECT usuario_id FROM viagem WHERE id = $1',
+        [viagemId]
+      );
+      if (!ownership.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Viagem não encontrada.' });
+      }
+      if (req.usuario.role !== 'admin' && ownership[0].usuario_id !== req.usuario.id) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Acesso negado.' });
+      }
+      // Atualiza status sempre que vier no payload
       if (b.statusViagem) {
         await client.query(
           'UPDATE viagem SET status = $1 WHERE id = $2',

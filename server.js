@@ -126,14 +126,14 @@ app.get('/api/filtros', requireAuth, async (req, res) => {
       pool.query(`SELECT DISTINCT nome FROM cliente ORDER BY nome`),
       pool.query(`SELECT DISTINCT nome FROM servico ORDER BY nome`),
       pool.query(`SELECT DISTINCT veiculo FROM viagem WHERE veiculo IS NOT NULL AND veiculo <> '' ORDER BY veiculo`),
-      pool.query(`SELECT DISTINCT modelo FROM equipamento WHERE modelo IS NOT NULL AND modelo <> '' ORDER BY modelo`),
+      pool.query(`SELECT DISTINCT equipamento FROM cliente WHERE equipamento IS NOT NULL AND equipamento <> '' ORDER BY equipamento`),
     ]);
     res.json({
       tecnicos:     tecnicos.rows.map(r => r.nome),
       clientes:     clientes.rows.map(r => r.nome),
       servicos:     servicos.rows.map(r => r.nome),
       veiculos:     veiculos.rows.map(r => r.veiculo),
-      equipamentos: equipamentos.rows.map(r => r.modelo),
+      equipamentos: equipamentos.rows.map(r => r.equipamento),
     });
   } catch (err) {
     console.error(err);
@@ -155,7 +155,7 @@ app.get('/api/viagens/buscar', requireAuth, async (req, res) => {
     if (servico)     { params.push(servico);       conds.push('s.nome ILIKE $' + params.length); }
     if (status)      { params.push(status);        conds.push('v.status = $' + params.length); }
     if (veiculo)     { params.push(veiculo);       conds.push('v.veiculo ILIKE $' + params.length); }
-    if (equipamento) { params.push(equipamento);   conds.push('e.modelo ILIKE $' + params.length); }
+    if (equipamento) { params.push(equipamento);   conds.push('c.equipamento ILIKE $' + params.length); }
     if (dataInicio)  { params.push(dataInicio);    conds.push('v.data_inicio >= $' + params.length); }
     if (dataFim)     { params.push(dataFim);       conds.push('v.data_inicio <= $' + params.length); }
 
@@ -175,8 +175,6 @@ app.get('/api/viagens/buscar', requireAuth, async (req, res) => {
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
       LEFT JOIN servico s ON s.id = v.servico_id
-      LEFT JOIN viagem_equipamento ve ON ve.viagem_id = v.id
-      LEFT JOIN equipamento e ON e.id = ve.equipamento_id
       ${where}
       ORDER BY v.id DESC
       LIMIT $${pLimit} OFFSET $${pOffset}
@@ -198,7 +196,9 @@ app.get('/api/viagens/:id', requireAuth, async (req, res) => {
     const { rows } = await pool.query(`
       SELECT v.id, u.nome AS tecnico, c.nome AS cliente, c.cidade,
              v.data_inicio AS "dataInicio", v.veiculo, v.adiantamento, v.auxiliares,
-             s.nome AS "servicoPrestado"
+             v.status AS "statusViagem",
+             s.nome AS "servicoPrestado",
+             c.equipamento AS equipamento
       FROM viagem v
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
@@ -264,23 +264,6 @@ async function findOrCreateServico(client, nome) {
   return s.id;
 }
 
-async function findOrCreateEquipamento(client, clienteId, modelo, numSerie) {
-  if (!modelo) return null;
-  const ns = numSerie || null;
-  // num_serie may be null — must use IS NULL instead of = null in WHERE
-  const selectSql = ns !== null
-    ? 'SELECT id FROM equipamento WHERE modelo = $1 AND cliente_id = $2 AND num_serie = $3 LIMIT 1'
-    : 'SELECT id FROM equipamento WHERE modelo = $1 AND cliente_id = $2 AND num_serie IS NULL LIMIT 1';
-  const selectParams = ns !== null ? [modelo, clienteId, ns] : [modelo, clienteId];
-  const { rows } = await client.query(selectSql, selectParams);
-  if (rows.length) return rows[0].id;
-  const { rows: [e] } = await client.query(
-    'INSERT INTO equipamento (modelo, num_serie, cliente_id) VALUES ($1, $2, $3) RETURNING id',
-    [modelo, ns, clienteId]
-  );
-  return e.id;
-}
-
 // ─── Cria uma viagem e retorna o ID — usado pelo HTML antes dos uploads ───────
 // HTML chama POST /api/viagens/criar
 app.post('/api/viagens/criar', requireAuth, async (req, res) => {
@@ -292,6 +275,14 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
     const usuarioId  = await findOrCreateUsuario(client, b.tecnico);
     const clienteId  = await findOrCreateCliente(client, b.cliente, b.cidade);
     const servicoId  = await findOrCreateServico(client, b.servicoPrestado);
+
+    // Atualiza equipamento no cliente, se informado
+    if (b.equipamento) {
+      await client.query(
+        'UPDATE cliente SET equipamento = $1 WHERE id = $2',
+        [b.equipamento, clienteId]
+      );
+    }
 
     const { rows: [v] } = await client.query(`
       INSERT INTO viagem (usuario_id, cliente_id, servico_id, data_inicio, veiculo, adiantamento, auxiliares, status)
@@ -307,16 +298,6 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
       b.statusViagem || 'Em Andamento',
     ]);
     const viagemId = v.id;
-
-    if (b.equipamento) {
-      const equipamentoId = await findOrCreateEquipamento(client, clienteId, b.equipamento, b.numSerie || null);
-      if (equipamentoId) {
-        await client.query(
-          'INSERT INTO viagem_equipamento (viagem_id, equipamento_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-          [viagemId, equipamentoId]
-        );
-      }
-    }
 
     await client.query('COMMIT');
 
@@ -386,6 +367,14 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
       const clienteId = await findOrCreateCliente(client, b.cliente, b.cidade);
       const servicoId = await findOrCreateServico(client, b.servicoPrestado);
 
+      // Atualiza equipamento no cliente, se informado
+      if (b.equipamento) {
+        await client.query(
+          'UPDATE cliente SET equipamento = $1 WHERE id = $2',
+          [b.equipamento, clienteId]
+        );
+      }
+
       const { rows: [v] } = await client.query(`
         INSERT INTO viagem (usuario_id, cliente_id, servico_id, data_inicio, veiculo, adiantamento, auxiliares, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
@@ -400,17 +389,6 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
         b.statusViagem || 'Em Andamento',
       ]);
       viagemId = v.id;
-
-      // Vincula equipamento (se informado)
-      if (b.equipamento) {
-        const equipamentoId = await findOrCreateEquipamento(client, clienteId, b.equipamento, b.numSerie || null);
-        if (equipamentoId) {
-          await client.query(
-            'INSERT INTO viagem_equipamento (viagem_id, equipamento_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [viagemId, equipamentoId]
-          );
-        }
-      }
     } else {
       // Viagem existente: atualiza status sempre que vier no payload
       if (b.statusViagem) {
@@ -473,7 +451,7 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
 app.get('/api/clientes', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT nome, cidade
+      SELECT nome, cidade, equipamento
       FROM cliente
       ORDER BY nome ASC, cidade ASC
     `);
@@ -562,13 +540,11 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
         u.nome AS tecnico,
         c.nome AS cliente, c.cidade,
         s.nome AS "servicoPrestado",
-        e.modelo AS equipamento, e.num_serie AS "numSerie"
+        c.equipamento AS equipamento
       FROM viagem v
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
       LEFT JOIN servico s ON s.id = v.servico_id
-      LEFT JOIN viagem_equipamento ve ON ve.viagem_id = v.id
-      LEFT JOIN equipamento e ON e.id = ve.equipamento_id
       WHERE v.id = $1
       LIMIT 1
     `, [req.params.id]);

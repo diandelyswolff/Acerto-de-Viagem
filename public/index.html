@@ -766,11 +766,7 @@
           <input type="text" id="equipamento" placeholder="Modelo(s)" required>
           <span class="autofill-hint" id="hint-equipamento">✦ preenchido automaticamente</span>
         </div>
-        <div class="field">
-          <label>Nº de Série</label>
-          <input type="text" id="numSerie" placeholder="Número de série">
-          <span class="autofill-hint" id="hint-numSerie">✦ preenchido automaticamente</span>
-        </div>
+
       </div>
     </div>
 
@@ -971,7 +967,7 @@ function salvarViagemId(id) {
 // ─────────────────────────────────────────────
 const DRAFT_TEXT_IDS = [
   'tecnico','auxiliares','dataInicio','veiculo',
-  'servicoPrestado','statusViagem','cliente','cidade','equipamento','numSerie',
+  'servicoPrestado','statusViagem','cliente','cidade','equipamento',
   'adiantamento','dataNFs','observacoes'
 ];
 
@@ -1273,7 +1269,7 @@ function renderTripList(viagens) {
 // ─────────────────────────────────────────────
 const AUTOFILL_FIELDS = [
   'tecnico', 'auxiliares', 'dataInicio', 'veiculo',
-  'servicoPrestado', 'statusViagem', 'cliente', 'cidade', 'equipamento', 'numSerie', 'adiantamento'
+  'servicoPrestado', 'statusViagem', 'cliente', 'cidade', 'equipamento', 'adiantamento'
 ];
 const AUTOFILL_SECTIONS = ['lockedNoteEquipe', 'lockedNoteServico', 'lockedNoteCliente', 'lockedNoteFinanceiro'];
 
@@ -1302,6 +1298,21 @@ function _filtrarCidades(nomeCliente) {
   }
   // Auto-select if only one city — silent to avoid loop
   if (cidades.length === 1) ssSelect('cidade', cidades[0], true);
+
+  // Preenche equipamento com o valor salvo no cliente (se existir)
+  // Não sobrescreve se o campo já está em modo autofill (viagem existente carregada)
+  const eqEl   = document.getElementById('equipamento');
+  const hintEl = document.getElementById('hint-equipamento');
+  if (!eqEl.classList.contains('autofilled')) {
+    const match = _todosClientes.find(c => c.nome === nomeCliente);
+    if (match?.equipamento) {
+      eqEl.value = match.equipamento;
+      if (hintEl) hintEl.style.display = 'inline';
+    } else {
+      eqEl.value = '';
+      if (hintEl) hintEl.style.display = 'none';
+    }
+  }
 }
 
 // Reverse: filter clientes based on selected cidade
@@ -1975,7 +1986,6 @@ async function handleSubmit() {
           cliente:         val('cliente'),
           cidade:          val('cidade'),
           equipamento:     val('equipamento'),
-          numSerie:        val('numSerie'),
           adiantamento:    val('adiantamento'),
         }),
       });
@@ -2054,7 +2064,6 @@ async function handleSubmit() {
     cliente:             val('cliente'),
     cidade:              val('cidade'),
     equipamento:         val('equipamento'),
-    numSerie:            val('numSerie'),
     adiantamento:        val('adiantamento'),
     dataNFs:             dataNFs,
     despesas:            { single: singleData, multi: multiData },

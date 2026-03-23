@@ -727,7 +727,6 @@
             <option value="Em Andamento">Em Andamento</option>
             <option value="Finalizada">Finalizada</option>
           </select>
-          <span class="autofill-hint" id="hint-statusViagem">✦ preenchido automaticamente</span>
         </div>
 
       </div>
@@ -1285,7 +1284,8 @@ function renderTripList(viagens) {
 // ─────────────────────────────────────────────
 const AUTOFILL_FIELDS = [
   'tecnico', 'auxiliares', 'dataInicio', 'veiculo',
-  'servicoPrestado', 'statusViagem', 'cliente', 'cidade', 'equipamento', 'adiantamento'
+  'servicoPrestado', 'cliente', 'cidade', 'equipamento', 'adiantamento'
+  /* 'statusViagem' excluído intencionalmente — preenchido mas nunca travado */
 ];
 const AUTOFILL_SECTIONS = ['lockedNoteEquipe', 'lockedNoteServico', 'lockedNoteCliente', 'lockedNoteFinanceiro'];
 
@@ -1480,7 +1480,7 @@ function _aplicarAutofill(dados) {
   });
 
   // Selects: encontra a opção pelo texto ou valor
-  ['servicoPrestado', 'tecnico', 'statusViagem'].forEach(id => {
+  ['servicoPrestado', 'tecnico'].forEach(id => {
     const sel = document.getElementById(id);
     if (sel && dados[id]) {
       const match = Array.from(sel.options).find(
@@ -1489,6 +1489,15 @@ function _aplicarAutofill(dados) {
       if (match) sel.value = match.value;
     }
   });
+
+  // statusViagem: preenche o valor mas mantém editável para o técnico poder finalizar
+  const statusSel = document.getElementById('statusViagem');
+  if (statusSel && dados.statusViagem) {
+    const match = Array.from(statusSel.options).find(
+      o => o.value === dados.statusViagem || o.text === dados.statusViagem
+    );
+    if (match) statusSel.value = match.value;
+  }
 
   // Cliente e cidade: searchable selects
   if (dados.cliente) {

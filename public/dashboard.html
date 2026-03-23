@@ -534,7 +534,6 @@ function renderDashboard({ viagem, envios, totais }) {
     { label:'Cliente',        value: viagem.cliente },
     { label:'Cidade',         value: viagem.cidade },
     { label:'Equipamento',    value: viagem.equipamento },
-    { label:'Nº de Série',    value: viagem.numSerie },
     { label:'Serviço',        value: viagem.servicoPrestado },
   ].filter(i => i.value)
    .map(i => `<div class="info-item"><span class="info-label">${i.label}</span><span class="info-value">${i.value}</span></div>`)

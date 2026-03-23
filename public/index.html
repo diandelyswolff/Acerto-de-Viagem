@@ -920,6 +920,8 @@ window.addEventListener('load', async () => {
   try {
     if (!getToken()) throw new Error('sem token');
     const me = await apiFetch('/auth/me');
+    _usuarioLogadoId = me.id;
+
     // Preenche e trava o campo técnico com o usuário logado
     const sel = document.getElementById('tecnico');
     if (sel) {
@@ -938,6 +940,16 @@ window.addEventListener('load', async () => {
     const headerP = document.querySelector('.card-header p');
     if (headerP) headerP.innerHTML =
       `Olá, <strong style="color:#fff">${me.nome}</strong> &nbsp;·&nbsp; <a href="#" onclick="fazerLogout()" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.78rem;">Sair</a>`;
+
+    // Descarta o rascunho se pertencer a outro usuário
+    const draft = _lerDraft();
+    if (draft && draft._usuarioId && draft._usuarioId !== me.id) {
+      _limparDraft();
+    } else if (draft) {
+      // Garante que o draft atual fica marcado com o usuário
+      draft._usuarioId = me.id;
+      localStorage.setItem(LS_DRAFT_KEY, JSON.stringify(draft));
+    }
   } catch (e) {
     window.location.href = 'login.html';
     return;
@@ -955,6 +967,8 @@ async function fazerLogout() {
 // ─────────────────────────────────────────────
 //  CÓDIGO DA VIAGEM — localStorage
 // ─────────────────────────────────────────────
+let _usuarioLogadoId = null; // preenchido no load após /auth/me
+
 const LS_KEY       = 'acerto_ultimo_viagem_id';
 const LS_DRAFT_KEY = 'acerto_draft_v1';
 
@@ -966,7 +980,8 @@ function salvarViagemId(id) {
 //  PERSISTÊNCIA DO RASCUNHO
 // ─────────────────────────────────────────────
 const DRAFT_TEXT_IDS = [
-  'tecnico','auxiliares','dataInicio','veiculo',
+  /* 'tecnico' excluído intencionalmente — sempre preenchido pelo token JWT no load */
+  'auxiliares','dataInicio','veiculo',
   'servicoPrestado','statusViagem','cliente','cidade','equipamento',
   'adiantamento','dataNFs','observacoes'
 ];
@@ -1015,6 +1030,7 @@ function _gravarDraft() {
         });
       }
     });
+    if (_usuarioLogadoId) draft._usuarioId = _usuarioLogadoId;
     localStorage.setItem(LS_DRAFT_KEY, JSON.stringify(draft));
   } catch(e) {
     console.warn('Erro ao gravar rascunho:', e);

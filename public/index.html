@@ -349,11 +349,13 @@
       background: rgba(255,255,255,0.82); backdrop-filter: blur(4px);
       display: none; justify-content: center; align-items: center; z-index: 1000;
     }
+    .loading-inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
     .spinner {
       border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--accent);
       border-radius: 50%; width: 36px; height: 36px;
       animation: spin 0.8s linear infinite;
     }
+    #loadingMsg { font-size: 0.85rem; color: var(--muted); text-align: center; max-width: 220px; line-height: 1.4; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── SUCCESS ── */
@@ -571,7 +573,7 @@
 </head>
 <body>
 
-<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+<div class="loading-overlay" id="loadingOverlay"><div class="loading-inner"><div class="spinner"></div><div id="loadingMsg"></div></div></div>
 
 <div class="card">
 
@@ -1874,8 +1876,9 @@ function showMessage(text, type) {
   messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function setLoading(v) {
+function setLoading(v, msg = '') {
   document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none';
+  document.getElementById('loadingMsg').textContent = msg;
   document.getElementById('saveBtn').disabled = v;
 }
 
@@ -1939,9 +1942,44 @@ function fileToB64(file) {
   });
 }
 
+// Comprime imagem via canvas antes do upload.
+// Imagens maiores que MAX_PX são redimensionadas; qualidade JPEG reduzida.
+// PDFs passam sem alteração.
+function comprimirImagem(file, { maxPx = 1280, quality = 0.72 } = {}) {
+  return new Promise((resolve, reject) => {
+    // PDFs e arquivos não-imagem: devolve como base64 sem alterar
+    if (!file.type.startsWith('image/')) {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      // Redimensiona mantendo proporção
+      if (width > maxPx || height > maxPx) {
+        if (width >= height) { height = Math.round(height * maxPx / width); width = maxPx; }
+        else                 { width  = Math.round(width  * maxPx / height); height = maxPx; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width  = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 // Envia um arquivo ao server.js, que repassa ao GAS server-side (sem CORS).
+// Comprime a imagem antes de converter para base64, reduzindo drasticamente o tamanho.
 async function uploadParaDrive({ file, viagemId, dataNFs, categoria, slot = null }) {
-  const b64 = await fileToB64(file);
+  const b64 = await comprimirImagem(file);
   const result = await apiFetch('/upload', {
     method: 'POST',
     body: JSON.stringify({ viagemId, dataNFs, categoria, slot, arquivo: b64 }),
@@ -1990,7 +2028,7 @@ async function handleSubmit() {
     }
   }
 
-  setLoading(true);
+  setLoading(true, 'Salvando viagem...');
 
   const dataNFs = val('dataNFs');
 
@@ -2021,21 +2059,63 @@ async function handleSubmit() {
     }
   }
 
-  // ── Passo 2: upload dos arquivos usando o ID real ─────────
-  const singleData = {};
+  // ── Passo 2 + 3: upload de todos os arquivos em paralelo ─────────
+  // Monta uma lista de tarefas de upload e dispara todas ao mesmo tempo,
+  // em vez de aguardar cada uma antes de iniciar a próxima.
+
+  const uploadTasks = []; // { type, key, slot?, index? }
+
   for (const { key } of SINGLES) {
     const fi = document.getElementById(`file-${key}`);
-    let link = '';
-    if (fi.files[0]) {
-      try {
-        link = await uploadParaDrive({ file: fi.files[0], viagemId, dataNFs, categoria: key });
-      } catch (e) {
-        showMessage(`Erro ao enviar arquivo "${key}" para o Drive.`, 'error');
-        setLoading(false); return;
+    if (fi && fi.files[0]) {
+      uploadTasks.push({ type: 'single', key, file: fi.files[0] });
+    }
+  }
+
+  for (const { key } of MULTIS) {
+    for (let i = 1; i <= SLOTS; i++) {
+      const sid = `${key}-${i}`;
+      const fi  = document.getElementById(`slotfile-${sid}`);
+      if (fi && fi.files[0]) {
+        uploadTasks.push({ type: 'multi', key, slot: i, file: fi.files[0] });
       }
     }
+  }
+
+  let sigBlob = null;
+  if (!isBlank()) {
+    sigBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    uploadTasks.push({ type: 'assinatura', key: 'assinatura', file: sigBlob });
+  }
+
+  // Dispara todos os uploads em paralelo
+  let uploadResults;
+  const total = uploadTasks.length;
+  if (total > 0) setLoading(true, `Enviando ${total} arquivo${total > 1 ? 's' : ''} para o Drive...`);
+  try {
+    uploadResults = await Promise.all(
+      uploadTasks.map(t => uploadParaDrive({ file: t.file, viagemId, dataNFs, categoria: t.key, slot: t.slot ?? null })
+        .then(link => ({ ...t, link }))
+      )
+    );
+  } catch (e) {
+    showMessage(`Erro ao enviar arquivo para o Drive: ${e.message}`, 'error');
+    setLoading(false); return;
+  }
+  if (total > 0) setLoading(true, 'Registrando no sistema...');
+
+  // Monta singleData e multiData a partir dos resultados
+  const linkMap = {};
+  for (const r of uploadResults) {
+    if (r.type === 'single') linkMap[`single-${r.key}`] = r.link;
+    else if (r.type === 'multi') linkMap[`multi-${r.key}-${r.slot}`] = r.link;
+    else if (r.type === 'assinatura') linkMap['assinatura'] = r.link;
+  }
+
+  const singleData = {};
+  for (const { key } of SINGLES) {
     singleData[key] = {
-      file:  link,
+      file:  linkMap[`single-${key}`] || '',
       pay:   getRadioVal(`pay-${key}`),
       valor: document.getElementById(`valor-${key}`)?.value || '',
     };
@@ -2047,35 +2127,19 @@ async function handleSubmit() {
     multiData[key] = [];
     let soma = 0;
     for (let i = 1; i <= SLOTS; i++) {
-      const sid = `${key}-${i}`;
-      const fi  = document.getElementById(`slotfile-${sid}`);
-      const v   = document.getElementById(`slotvalor-${sid}`)?.value || '';
-      if (fi.files[0]) {
+      const sid  = `${key}-${i}`;
+      const fi   = document.getElementById(`slotfile-${sid}`);
+      const v    = document.getElementById(`slotvalor-${sid}`)?.value || '';
+      const link = linkMap[`multi-${key}-${i}`];
+      if (fi && fi.files[0] && link) {
         soma += parseFloat(v) || 0;
-        let link = '';
-        try {
-          link = await uploadParaDrive({ file: fi.files[0], viagemId, dataNFs, categoria: key, slot: i });
-        } catch (e) {
-          showMessage(`Erro ao enviar arquivo "${key} #${i}" para o Drive.`, 'error');
-          setLoading(false); return;
-        }
         multiData[key].push({ slot: i, file: link, pay: getRadioVal(`slotpay-${sid}`), valor: v });
       }
     }
     totais[key] = soma.toFixed(2);
   }
 
-  // ── Passo 3: upload da assinatura para o Drive ──────────
-  let sigLink = '';
-  if (!isBlank()) {
-    try {
-      const sigBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-      sigLink = await uploadParaDrive({ file: sigBlob, viagemId, dataNFs, categoria: 'assinatura' });
-    } catch (e) {
-      showMessage('Erro ao enviar assinatura para o Drive.', 'error');
-      setLoading(false); return;
-    }
-  }
+  const sigLink = linkMap['assinatura'] || '';
 
   // ── Passo 4: monta payload para o envio ───────────────────
   const payload = {

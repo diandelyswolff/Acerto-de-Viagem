@@ -190,6 +190,36 @@ app.get('/api/viagens/buscar', requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ─── Vincula (ou re-vincula) a pasta do Drive a uma viagem ───────────────────
+// Dashboard chama POST /api/viagens/:id/vincular-drive
+app.post('/api/viagens/:id/vincular-drive', requireAdmin, async (req, res) => {
+  if (!GAS_UPLOAD_URL) {
+    return res.status(500).json({ error: 'GAS_UPLOAD_URL não configurada no .env' });
+  }
+  const viagemId = parseInt(req.params.id);
+  try {
+    // Busca (ou cria) a pasta Viagem-{id} no Drive via GAS
+    const gasRes  = await fetch(GAS_UPLOAD_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ viagemId, action: 'buscar_pasta' }),
+    });
+    const rawText = await gasRes.text();
+    let gasData;
+    try { gasData = JSON.parse(rawText); } catch (_) {
+      return res.status(502).json({ error: 'GAS retornou resposta inválida.', gasPreview: rawText.slice(0, 200) });
+    }
+    if (gasData.status !== 'ok' || !gasData.link) {
+      return res.status(502).json({ error: gasData.message || 'GAS não retornou link.' });
+    }
+    await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [gasData.link, viagemId]);
+    res.json({ link: gasData.link });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Detalhes de uma viagem pelo ID
 // O HTML chama GET /api/viagens/:id
 app.get('/api/viagens/:id', requireAuth, async (req, res) => {
@@ -308,22 +338,19 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Garante a pasta da viagem no Drive e salva o link retornado em link_pasta
+    // Garante a pasta da viagem no Drive imediatamente (sem arquivo) e salva o link
     if (GAS_UPLOAD_URL) {
       try {
-        const gasResp = await fetch(GAS_UPLOAD_URL, {
+        const gasRes  = await fetch(GAS_UPLOAD_URL, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
         });
-        const gasData = await gasResp.json();
-        if (gasData.status === 'ok' && gasData.link) {
-          await pool.query(
-            'UPDATE viagem SET link_pasta = $1 WHERE id = $2',
-            [gasData.link, viagemId]
-          );
+        const gasData = await gasRes.json().catch(() => null);
+        if (gasData?.status === 'ok' && gasData.link) {
+          await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [gasData.link, viagemId]);
         } else {
-          console.warn('Aviso: GAS não retornou link de pasta:', gasData);
+          console.warn('Aviso: GAS não retornou link válido ao criar viagem:', gasData);
         }
       } catch (e) {
         console.warn('Aviso: não foi possível criar pasta no Drive:', e.message);
@@ -430,26 +457,6 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
         b.statusViagem || 'Em Andamento',
       ]);
       viagemId = v.id;
-
-      // Garante a pasta no Drive e salva o link em link_pasta
-      if (GAS_UPLOAD_URL) {
-        try {
-          const gasResp = await fetch(GAS_UPLOAD_URL, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
-          });
-          const gasData = await gasResp.json();
-          if (gasData.status === 'ok' && gasData.link) {
-            await client.query(
-              'UPDATE viagem SET link_pasta = $1 WHERE id = $2',
-              [gasData.link, viagemId]
-            );
-          }
-        } catch (e) {
-          console.warn('Aviso: não foi possível criar pasta no Drive:', e.message);
-        }
-      }
     } else {
       // Viagem existente: verifica se pertence ao usuário autenticado
       const { rows: ownership } = await client.query(
@@ -508,6 +515,24 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // Para viagens novas criadas inline, tenta criar pasta no Drive e salvar link
+    if (!b.viagemId && GAS_UPLOAD_URL) {
+      try {
+        const gasRes  = await fetch(GAS_UPLOAD_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
+        });
+        const gasData = await gasRes.json().catch(() => null);
+        if (gasData?.status === 'ok' && gasData.link) {
+          await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [gasData.link, viagemId]);
+        }
+      } catch (e) {
+        console.warn('Aviso: não foi possível criar pasta no Drive (acertos):', e.message);
+      }
+    }
+
     res.json({ viagemId });
   } catch (err) {
     await client.query('ROLLBACK');

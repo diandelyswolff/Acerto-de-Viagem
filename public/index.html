@@ -2088,19 +2088,50 @@ async function handleSubmit() {
     uploadTasks.push({ type: 'assinatura', key: 'assinatura', file: sigBlob });
   }
 
-  // Dispara todos os uploads em paralelo
-  let uploadResults;
+  // Dispara uploads com concorrência limitada (máx. 2 simultâneos) para não
+  // sobrecarregar o GAS, que executa scripts em série.
+  // Cada upload tem 1 retry automático em caso de falha transitória.
+  async function uploadComRetry(task, tentativa = 1) {
+    try {
+      const link = await uploadParaDrive({ file: task.file, viagemId, dataNFs, categoria: task.key, slot: task.slot ?? null });
+      return { ...task, link };
+    } catch (e) {
+      if (tentativa < 2) {
+        await new Promise(r => setTimeout(r, 1500)); // aguarda 1.5s antes de tentar de novo
+        return uploadComRetry(task, tentativa + 1);
+      }
+      throw new Error(`Arquivo "${task.key}${task.slot ? ' #' + task.slot : ''}": ${e.message}`);
+    }
+  }
+
+  async function uploadComConcorrencia(tasks, maxConcorrente = 2) {
+    const results = [];
+    let idx = 0;
+
+    async function worker() {
+      while (idx < tasks.length) {
+        const task = tasks[idx++];
+        results.push(await uploadComRetry(task));
+        const done = results.length;
+        setLoading(true, `Enviando arquivos... (${done}/${tasks.length})`);
+      }
+    }
+
+    const workers = Array.from({ length: Math.min(maxConcorrente, tasks.length) }, worker);
+    await Promise.all(workers);
+    return results;
+  }
+
+  let uploadResults = [];
   const total = uploadTasks.length;
-  if (total > 0) setLoading(true, `Enviando ${total} arquivo${total > 1 ? 's' : ''} para o Drive...`);
-  try {
-    uploadResults = await Promise.all(
-      uploadTasks.map(t => uploadParaDrive({ file: t.file, viagemId, dataNFs, categoria: t.key, slot: t.slot ?? null })
-        .then(link => ({ ...t, link }))
-      )
-    );
-  } catch (e) {
-    showMessage(`Erro ao enviar arquivo para o Drive: ${e.message}`, 'error');
-    setLoading(false); return;
+  if (total > 0) {
+    setLoading(true, `Enviando arquivos... (0/${total})`);
+    try {
+      uploadResults = await uploadComConcorrencia(uploadTasks, 2);
+    } catch (e) {
+      showMessage(`Erro ao enviar arquivo para o Drive: ${e.message}`, 'error');
+      setLoading(false); return;
+    }
   }
   if (total > 0) setLoading(true, 'Registrando no sistema...');
 

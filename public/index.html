@@ -1867,9 +1867,9 @@ const messageBox = document.getElementById('messageBox');
 
 function showMessage(text, type) {
   messageBox.textContent = text;
-  const bg     = type === 'error' ? '#fff1f1' : type === 'info' ? '#eff6ff' : '#f0fdf4';
-  const color  = type === 'error' ? '#c8000a' : type === 'info' ? '#1d4ed8' : '#14803c';
-  const border = type === 'error' ? '#fecaca' : type === 'info' ? '#bfdbfe' : '#bbf7d0';
+  const bg     = type === 'error' ? '#fff1f1' : '#f0fdf4';
+  const color  = type === 'error' ? '#c8000a' : '#14803c';
+  const border = type === 'error' ? '#fecaca' : '#bbf7d0';
   messageBox.style.cssText = 'display:block;padding:0.75rem 1rem;border-radius:10px;font-size:0.875rem;font-weight:500;margin-bottom:1rem;background:' + bg + ';color:' + color + ';border:1px solid ' + border + ';';
   messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -2021,62 +2021,21 @@ async function handleSubmit() {
     }
   }
 
-  // ── Passo 2: coleta todas as tarefas de upload e dispara em paralelo ──────
-  const uploadTasks = []; // { type, key, slot?, index? }
-
-  for (const { key } of SINGLES) {
-    const fi = document.getElementById(`file-${key}`);
-    if (fi.files[0]) uploadTasks.push({ type: 'single', key, file: fi.files[0] });
-  }
-
-  for (const { key } of MULTIS) {
-    for (let i = 1; i <= SLOTS; i++) {
-      const sid = `${key}-${i}`;
-      const fi  = document.getElementById(`slotfile-${sid}`);
-      if (fi.files[0]) uploadTasks.push({ type: 'multi', key, slot: i, file: fi.files[0] });
-    }
-  }
-
-  if (!isBlank()) {
-    const sigBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    uploadTasks.push({ type: 'assinatura', key: 'assinatura', file: sigBlob });
-  }
-
-  // Atualiza o indicador de progresso enquanto os uploads correm
-  let concluidos = 0;
-  const total = uploadTasks.length;
-  function _atualizarProgresso() {
-    concluidos++;
-    showMessage(`Enviando arquivos… ${concluidos}/${total}`, 'info');
-  }
-
-  let resultados;
-  try {
-    resultados = await Promise.all(
-      uploadTasks.map(t =>
-        uploadParaDrive({ file: t.file, viagemId, dataNFs, categoria: t.key, slot: t.slot || null })
-          .then(link => { _atualizarProgresso(); return { ...t, link }; })
-      )
-    );
-  } catch (e) {
-    showMessage('Erro ao enviar um ou mais arquivos para o Drive.', 'error');
-    setLoading(false); return;
-  }
-
-  // Monta singleData e multiData a partir dos resultados
-  const linkMap = {};
-  for (const r of resultados) {
-    if (r.type === 'single' || r.type === 'assinatura') {
-      linkMap[r.key] = r.link;
-    } else {
-      linkMap[`${r.key}-${r.slot}`] = r.link;
-    }
-  }
-
+  // ── Passo 2: upload dos arquivos usando o ID real ─────────
   const singleData = {};
   for (const { key } of SINGLES) {
+    const fi = document.getElementById(`file-${key}`);
+    let link = '';
+    if (fi.files[0]) {
+      try {
+        link = await uploadParaDrive({ file: fi.files[0], viagemId, dataNFs, categoria: key });
+      } catch (e) {
+        showMessage(`Erro ao enviar arquivo "${key}" para o Drive.`, 'error');
+        setLoading(false); return;
+      }
+    }
     singleData[key] = {
-      file:  linkMap[key] || '',
+      file:  link,
       pay:   getRadioVal(`pay-${key}`),
       valor: document.getElementById(`valor-${key}`)?.value || '',
     };
@@ -2090,21 +2049,33 @@ async function handleSubmit() {
     for (let i = 1; i <= SLOTS; i++) {
       const sid = `${key}-${i}`;
       const fi  = document.getElementById(`slotfile-${sid}`);
+      const v   = document.getElementById(`slotvalor-${sid}`)?.value || '';
       if (fi.files[0]) {
-        const v = document.getElementById(`slotvalor-${sid}`)?.value || '';
         soma += parseFloat(v) || 0;
-        multiData[key].push({
-          slot:  i,
-          file:  linkMap[`${key}-${i}`] || '',
-          pay:   getRadioVal(`slotpay-${sid}`),
-          valor: v,
-        });
+        let link = '';
+        try {
+          link = await uploadParaDrive({ file: fi.files[0], viagemId, dataNFs, categoria: key, slot: i });
+        } catch (e) {
+          showMessage(`Erro ao enviar arquivo "${key} #${i}" para o Drive.`, 'error');
+          setLoading(false); return;
+        }
+        multiData[key].push({ slot: i, file: link, pay: getRadioVal(`slotpay-${sid}`), valor: v });
       }
     }
     totais[key] = soma.toFixed(2);
   }
 
-  const sigLink = linkMap['assinatura'] || '';
+  // ── Passo 3: upload da assinatura para o Drive ──────────
+  let sigLink = '';
+  if (!isBlank()) {
+    try {
+      const sigBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      sigLink = await uploadParaDrive({ file: sigBlob, viagemId, dataNFs, categoria: 'assinatura' });
+    } catch (e) {
+      showMessage('Erro ao enviar assinatura para o Drive.', 'error');
+      setLoading(false); return;
+    }
+  }
 
   // ── Passo 4: monta payload para o envio ───────────────────
   const payload = {

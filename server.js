@@ -347,11 +347,36 @@ app.post('/api/upload', requireAuth, async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(req.body),
     });
-    const data = await response.json();
-    if (data.status !== 'ok') throw new Error(data.message || 'Erro no GAS');
+
+    // Lê o corpo como texto primeiro para diagnóstico — o GAS às vezes
+    // retorna uma página HTML de erro em vez de JSON (ex.: timeout, quota).
+    const rawText = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (_) {
+      // GAS retornou algo que não é JSON (página de erro, HTML, etc.)
+      console.error('GAS retornou resposta não-JSON (status HTTP', response.status, '):\n', rawText.slice(0, 500));
+      return res.status(502).json({
+        error: `GAS retornou resposta inválida (HTTP ${response.status}). Verifique os logs do Apps Script.`,
+        gasPreview: rawText.slice(0, 200),
+      });
+    }
+
+    if (data.status !== 'ok') {
+      console.error('GAS retornou status de erro:', data);
+      throw new Error(data.message || `GAS status: ${data.status}`);
+    }
+
+    if (!data.link) {
+      console.error('GAS retornou status ok mas sem link:', data);
+      throw new Error('GAS não retornou o link do arquivo.');
+    }
+
     res.json({ link: data.link });
   } catch (err) {
-    console.error('Erro no upload para o Drive:', err);
+    console.error('Erro no upload para o Drive:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

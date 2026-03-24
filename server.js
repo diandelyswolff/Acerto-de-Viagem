@@ -581,7 +581,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
     const { rows: [viagem] } = await pool.query(`
       SELECT
         v.id, v.data_inicio AS "dataInicio", v.veiculo, v.adiantamento,
-        v.auxiliares, v.status,
+        v.auxiliares, v.status, v.link_pasta AS "linkPasta",
         u.nome AS tecnico,
         c.nome AS cliente, c.cidade,
         s.nome AS "servicoPrestado",

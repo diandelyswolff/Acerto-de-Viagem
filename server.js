@@ -308,22 +308,22 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Garante a pasta da viagem no Drive imediatamente (sem arquivo)
-    // e salva o link retornado pelo GAS em viagem.link_pasta
+    // Garante a pasta da viagem no Drive e salva o link retornado em link_pasta
     if (GAS_UPLOAD_URL) {
       try {
-        const gasRes  = await fetch(GAS_UPLOAD_URL, {
+        const gasResp = await fetch(GAS_UPLOAD_URL, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
         });
-        const gasData = await gasRes.json().catch(() => null);
-        const folderLink = gasData?.folderLink || gasData?.link || null;
-        if (folderLink) {
+        const gasData = await gasResp.json();
+        if (gasData.status === 'ok' && gasData.link) {
           await pool.query(
             'UPDATE viagem SET link_pasta = $1 WHERE id = $2',
-            [folderLink, viagemId]
+            [gasData.link, viagemId]
           );
+        } else {
+          console.warn('Aviso: GAS não retornou link de pasta:', gasData);
         }
       } catch (e) {
         console.warn('Aviso: não foi possível criar pasta no Drive:', e.message);
@@ -430,6 +430,26 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
         b.statusViagem || 'Em Andamento',
       ]);
       viagemId = v.id;
+
+      // Garante a pasta no Drive e salva o link em link_pasta
+      if (GAS_UPLOAD_URL) {
+        try {
+          const gasResp = await fetch(GAS_UPLOAD_URL, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
+          });
+          const gasData = await gasResp.json();
+          if (gasData.status === 'ok' && gasData.link) {
+            await client.query(
+              'UPDATE viagem SET link_pasta = $1 WHERE id = $2',
+              [gasData.link, viagemId]
+            );
+          }
+        } catch (e) {
+          console.warn('Aviso: não foi possível criar pasta no Drive:', e.message);
+        }
+      }
     } else {
       // Viagem existente: verifica se pertence ao usuário autenticado
       const { rows: ownership } = await client.query(

@@ -155,6 +155,14 @@
     .info-value { font-size: 0.92rem; font-weight: 600; color: var(--text); }
     .info-link { color: var(--accent); text-decoration: none; }
     .info-link:hover { text-decoration: underline; }
+    .btn-vincular-drive {
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      padding: 4px 12px; border-radius: 6px; border: 1.5px solid var(--accent);
+      background: transparent; color: var(--accent);
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-vincular-drive:hover:not(:disabled) { background: var(--accent); color: #fff; }
+    .btn-vincular-drive:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .viagem-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.25rem 1.5rem 0; }
     .viagem-id { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1; }
@@ -351,6 +359,25 @@ function fmtData(v) {
   const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
 }
+async function vincularDrive(viagemId) {
+  const btn = document.querySelector('.btn-vincular-drive');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Vinculando...'; }
+  try {
+    const token = localStorage.getItem('acerto_token');
+    const res = await fetch(`/api/viagens/${viagemId}/vincular-drive`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    // Recarrega o painel para exibir o link
+    await abrirViagem(viagemId);
+  } catch (err) {
+    alert('Erro ao vincular pasta: ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 Vincular com Drive'; }
+  }
+}
+
 function payTag(pag) {
   if (pag === 'dinheiro_pix') return '<span class="pay-tag pix">PIX</span>';
   if (pag === 'cartao_corp')  return '<span class="pay-tag corp">CORP</span>';
@@ -541,11 +568,13 @@ function renderDashboard({ viagem, envios, totais }) {
     { label:'Cidade',         value: viagem.cidade },
     { label:'Equipamento',    value: viagem.equipamento },
     { label:'Serviço',        value: viagem.servicoPrestado },
-    { label:'Pasta da Viagem', value: viagem.linkPasta || null, link: true },
-  ].filter(i => i.value)
+    { label:'Pasta da Viagem', value: viagem.linkPasta || null, link: true, viagemId: viagem.id },
+  ].filter(i => i.value || i.label === 'Pasta da Viagem')
    .map(i => `<div class="info-item"><span class="info-label">${i.label}</span>${
-     i.link
-       ? `<a class="info-value info-link" href="${i.value}" target="_blank" rel="noopener">Abrir no Drive ↗</a>`
+     i.label === 'Pasta da Viagem'
+       ? (i.value
+           ? `<a class="info-value info-link" href="${i.value}" target="_blank" rel="noopener">Abrir no Drive ↗</a>`
+           : `<button class="btn-vincular-drive" onclick="vincularDrive(${i.viagemId})">🔗 Vincular com Drive</button>`)
        : `<span class="info-value">${i.value}</span>`
    }</div>`)
    .join('');

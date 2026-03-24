@@ -184,7 +184,13 @@
     .pay-tag.corp { background: var(--corp-bg); color: var(--corp-fg); }
     .dash { color: #c4cdd8; }
 
-    .obs-block { background: #f8f9fc; border-radius: 10px; padding: 1rem 1.25rem; font-size: 0.875rem; line-height: 1.65; color: var(--text); border-left: 3px solid var(--border); white-space: pre-wrap; }
+    .obs-block { display: flex; flex-direction: column; gap: 0.65rem; }
+    .obs-item { background: #f8f9fc; border-radius: 10px; padding: 0.85rem 1.1rem; font-size: 0.875rem; line-height: 1.65; color: var(--text); border-left: 3px solid var(--border); }
+    .obs-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.25rem; font-weight: 500; }
+    .obs-text { white-space: pre-wrap; }
+    .drive-link-wrap { padding: 0.85rem 1.1rem; }
+    .drive-link-btn { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--accent); text-decoration: none; background: #f0f4ff; border: 1px solid #d0daff; border-radius: 8px; padding: 0.45rem 0.9rem; transition: background 0.15s, color 0.15s; }
+    .drive-link-btn:hover { background: var(--accent); color: #fff; }
     .btn-mais { background: var(--card); color: var(--accent); border: 1.5px solid var(--border); border-radius: 9999px; padding: 0.55rem 1.5rem; font-size: 0.8rem; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; margin: 0 auto; transition: background 0.13s, border-color 0.13s; }
     .btn-mais:hover { background: var(--accent-light); border-color: var(--accent); }
   </style>
@@ -313,6 +319,21 @@
           Observações
         </div>
         <div class="d-card-body"><div class="obs-block" id="dObs"></div></div>
+      </div>
+
+      <div class="d-card" id="cardDrive" style="display:none">
+        <div class="d-card-header">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Pasta da Viagem
+        </div>
+        <div class="d-card-body">
+          <div class="drive-link-wrap">
+            <a id="dDriveLink" href="#" target="_blank" rel="noopener" class="drive-link-btn">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Abrir no Google Drive
+            </a>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -572,10 +593,29 @@ function renderDashboard({ viagem, envios, totais }) {
     <tfoot><tr><td>TOTAL</td>${tfootCells.join('')}<td style="color:var(--accent-dark)">${fmtMoeda(grandTotal)}</td></tr></tfoot>
   </table>`;
 
-  const obs = envios.map(e=>(e.observacoes||'').trim()).filter(Boolean).join('\n\n');
+  const obsEntries = envios
+    .filter(e => (e.observacoes || '').trim())
+    .map(e => ({ texto: e.observacoes.trim(), data: e.dataNFs || e.timestamp }));
   const cardObs = document.getElementById('cardObs');
-  if (obs) { document.getElementById('dObs').textContent = obs; cardObs.style.display = ''; }
-  else cardObs.style.display = 'none';
+  if (obsEntries.length) {
+    document.getElementById('dObs').innerHTML = obsEntries.map(o => `
+      <div class="obs-item">
+        ${o.data ? `<div class="obs-meta">${fmtData(o.data)}</div>` : ''}
+        <div class="obs-text">${o.texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      </div>`).join('');
+    cardObs.style.display = '';
+  } else {
+    cardObs.style.display = 'none';
+  }
+
+  const cardDrive = document.getElementById('cardDrive');
+  if (viagem.linkPasta) {
+    const a = document.getElementById('dDriveLink');
+    a.href = viagem.linkPasta;
+    cardDrive.style.display = '';
+  } else {
+    cardDrive.style.display = 'none';
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

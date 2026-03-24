@@ -309,13 +309,22 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
     await client.query('COMMIT');
 
     // Garante a pasta da viagem no Drive imediatamente (sem arquivo)
+    // e salva o link retornado pelo GAS em viagem.link_pasta
     if (GAS_UPLOAD_URL) {
       try {
-        await fetch(GAS_UPLOAD_URL, {
+        const gasRes  = await fetch(GAS_UPLOAD_URL, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
         });
+        const gasData = await gasRes.json().catch(() => null);
+        const folderLink = gasData?.folderLink || gasData?.link || null;
+        if (folderLink) {
+          await pool.query(
+            'UPDATE viagem SET link_pasta = $1 WHERE id = $2',
+            [folderLink, viagemId]
+          );
+        }
       } catch (e) {
         console.warn('Aviso: não foi possível criar pasta no Drive:', e.message);
       }

@@ -2127,7 +2127,7 @@ async function handleSubmit() {
   if (total > 0) {
     setLoading(true, `Enviando arquivos... (0/${total})`);
     try {
-      uploadResults = await uploadComConcorrencia(uploadTasks, 2);
+      uploadResults = await uploadComConcorrencia(uploadTasks, 1);
     } catch (e) {
       showMessage(`Erro ao enviar arquivo para o Drive: ${e.message}`, 'error');
       setLoading(false); return;

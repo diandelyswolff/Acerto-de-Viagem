@@ -153,6 +153,8 @@
     .info-item { display: flex; flex-direction: column; gap: 0.2rem; }
     .info-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
     .info-value { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+    .info-link { color: var(--accent); text-decoration: none; }
+    .info-link:hover { text-decoration: underline; }
 
     .viagem-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.25rem 1.5rem 0; }
     .viagem-id { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1; }
@@ -188,9 +190,6 @@
     .obs-item { background: #f8f9fc; border-radius: 10px; padding: 0.85rem 1.1rem; font-size: 0.875rem; line-height: 1.65; color: var(--text); border-left: 3px solid var(--border); }
     .obs-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.25rem; font-weight: 500; }
     .obs-text { white-space: pre-wrap; }
-    .drive-link-wrap { padding: 0.85rem 1.1rem; }
-    .drive-link-btn { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--accent); text-decoration: none; background: #f0f4ff; border: 1px solid #d0daff; border-radius: 8px; padding: 0.45rem 0.9rem; transition: background 0.15s, color 0.15s; }
-    .drive-link-btn:hover { background: var(--accent); color: #fff; }
     .btn-mais { background: var(--card); color: var(--accent); border: 1.5px solid var(--border); border-radius: 9999px; padding: 0.55rem 1.5rem; font-size: 0.8rem; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; margin: 0 auto; transition: background 0.13s, border-color 0.13s; }
     .btn-mais:hover { background: var(--accent-light); border-color: var(--accent); }
   </style>
@@ -321,20 +320,6 @@
         <div class="d-card-body"><div class="obs-block" id="dObs"></div></div>
       </div>
 
-      <div class="d-card" id="cardDrive" style="display:none">
-        <div class="d-card-header">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          Pasta da Viagem
-        </div>
-        <div class="d-card-body">
-          <div class="drive-link-wrap">
-            <a id="dDriveLink" href="#" target="_blank" rel="noopener" class="drive-link-btn">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Abrir no Google Drive
-            </a>
-          </div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -556,8 +541,13 @@ function renderDashboard({ viagem, envios, totais }) {
     { label:'Cidade',         value: viagem.cidade },
     { label:'Equipamento',    value: viagem.equipamento },
     { label:'Serviço',        value: viagem.servicoPrestado },
+    { label:'Pasta da Viagem', value: viagem.linkPasta || null, link: true },
   ].filter(i => i.value)
-   .map(i => `<div class="info-item"><span class="info-label">${i.label}</span><span class="info-value">${i.value}</span></div>`)
+   .map(i => `<div class="info-item"><span class="info-label">${i.label}</span>${
+     i.link
+       ? `<a class="info-value info-link" href="${i.value}" target="_blank" rel="noopener">Abrir no Drive ↗</a>`
+       : `<span class="info-value">${i.value}</span>`
+   }</div>`)
    .join('');
 
   document.getElementById('dTotaisGrid').innerHTML = `
@@ -608,14 +598,6 @@ function renderDashboard({ viagem, envios, totais }) {
     cardObs.style.display = 'none';
   }
 
-  const cardDrive = document.getElementById('cardDrive');
-  if (viagem.linkPasta) {
-    const a = document.getElementById('dDriveLink');
-    a.href = viagem.linkPasta;
-    cardDrive.style.display = '';
-  } else {
-    cardDrive.style.display = 'none';
-  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

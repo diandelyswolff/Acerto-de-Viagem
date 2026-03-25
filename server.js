@@ -708,6 +708,141 @@ app.patch('/api/admin/usuarios/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ─── Edição de viagem (somente admin) ────────────────────────────────────────
+// PATCH /api/admin/viagens/:id
+// Aceita qualquer subconjunto de: tecnico, dataInicio, cliente, cidade, servico,
+// veiculo, adiantamento, status, auxiliares.
+app.patch('/api/admin/viagens/:id', requireAdmin, async (req, res) => {
+  const viagemId = parseInt(req.params.id);
+  if (!viagemId) return res.status(400).json({ error: 'ID inválido.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const b = req.body;
+
+    // Resolve usuario_id a partir do nome informado
+    if (b.tecnico !== undefined) {
+      const { rows } = await client.query(
+        'SELECT id FROM usuario WHERE nome = $1 AND ativo = TRUE LIMIT 1',
+        [b.tecnico]
+      );
+      if (!rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `Técnico "${b.tecnico}" não encontrado ou inativo.` });
+      }
+      await client.query('UPDATE viagem SET usuario_id = $1 WHERE id = $2', [rows[0].id, viagemId]);
+    }
+
+    // Resolve cliente_id a partir de nome + cidade (find-or-create)
+    if (b.cliente !== undefined || b.cidade !== undefined) {
+      // Busca o par atual para completar campos não enviados
+      const { rows: cur } = await client.query(
+        `SELECT c.nome, c.cidade FROM viagem v JOIN cliente c ON c.id = v.cliente_id WHERE v.id = $1`,
+        [viagemId]
+      );
+      const nomeCliente = b.cliente ?? cur[0]?.nome ?? '';
+      const cidadeCliente = b.cidade ?? cur[0]?.cidade ?? '';
+      const clienteId = await findOrCreateCliente(client, nomeCliente, cidadeCliente);
+      await client.query('UPDATE viagem SET cliente_id = $1 WHERE id = $2', [clienteId, viagemId]);
+    }
+
+    // Resolve servico_id
+    if (b.servico !== undefined) {
+      const servicoId = await findOrCreateServico(client, b.servico || null);
+      await client.query('UPDATE viagem SET servico_id = $1 WHERE id = $2', [servicoId, viagemId]);
+    }
+
+    // Campos diretos na tabela viagem
+    const sets   = [];
+    const params = [];
+
+    if (b.dataInicio !== undefined)  { params.push(b.dataInicio);                       sets.push(`data_inicio = $${params.length}`); }
+    if (b.veiculo    !== undefined)  { params.push(b.veiculo || null);                  sets.push(`veiculo = $${params.length}`); }
+    if (b.adiantamento !== undefined){ params.push(parseFloat(b.adiantamento) || 0);    sets.push(`adiantamento = $${params.length}`); }
+    if (b.status     !== undefined)  { params.push(b.status);                           sets.push(`status = $${params.length}`); }
+    if (b.auxiliares !== undefined)  { params.push(b.auxiliares);                       sets.push(`auxiliares = $${params.length}`); }
+
+    if (sets.length) {
+      params.push(viagemId);
+      await client.query(`UPDATE viagem SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// ─── Edição de envio e suas despesas (somente admin) ─────────────────────────
+// PATCH /api/admin/envios/:id
+// Body: { dataNFs, equipamento, observacoes, despesas: [{cat, tipo, slot, valor, pagamento}] }
+app.patch('/api/admin/envios/:id', requireAdmin, async (req, res) => {
+  const envioId = parseInt(req.params.id);
+  if (!envioId) return res.status(400).json({ error: 'ID inválido.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const b = req.body;
+
+    // Atualiza campos do envio
+    const sets   = [];
+    const params = [];
+    if (b.dataNFs     !== undefined) { params.push(b.dataNFs || null);       sets.push(`data_nfs = $${params.length}`); }
+    if (b.equipamento !== undefined) { params.push(b.equipamento || null);   sets.push(`equipamento = $${params.length}`); }
+    if (b.observacoes !== undefined) { params.push(b.observacoes ?? '');     sets.push(`observacoes = $${params.length}`); }
+
+    if (sets.length) {
+      params.push(envioId);
+      const result = await client.query(
+        `UPDATE envio SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING id`,
+        params
+      );
+      if (!result.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Envio não encontrado.' });
+      }
+    }
+
+    // Atualiza despesas individualmente pelo (envio_id, categoria, slot)
+    for (const d of (b.despesas || [])) {
+      const catRow = await client.query(
+        'SELECT id FROM despesa_categoria WHERE nome = $1 LIMIT 1',
+        [d.cat]
+      );
+      if (!catRow.rows.length) continue;
+      const catId = catRow.rows[0].id;
+
+      if (d.tipo === 'simples') {
+        await client.query(`
+          UPDATE despesa SET valor = $1, pagamento = $2
+          WHERE envio_id = $3 AND categoria_id = $4 AND slot_numero IS NULL
+        `, [parseFloat(d.valor) || 0, d.pagamento || '', envioId, catId]);
+      } else {
+        await client.query(`
+          UPDATE despesa SET valor = $1, pagamento = $2
+          WHERE envio_id = $3 AND categoria_id = $4 AND slot_numero = $5
+        `, [parseFloat(d.valor) || 0, d.pagamento || '', envioId, catId, d.slot]);
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // Serve os HTMLs estáticos da pasta public/
 app.use(express.static(path.join(__dirname, 'public')));
 

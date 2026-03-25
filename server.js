@@ -633,6 +633,81 @@ app.get('/api/auth/me', (req, res) => {
   }
 });
 
+// ─── CRUD de usuários (somente admin) ────────────────────────────────────────
+
+// Lista todos os usuários
+app.get('/api/admin/usuarios', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, nome, role, ativo FROM usuario ORDER BY nome`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Cria um novo usuário
+app.post('/api/admin/usuarios', requireAdmin, async (req, res) => {
+  const { nome, senha, role } = req.body;
+  if (!nome || !nome.trim())   return res.status(400).json({ error: 'Nome é obrigatório.' });
+  if (!senha || !senha.trim()) return res.status(400).json({ error: 'Senha é obrigatória.' });
+  const roleVal = role === 'admin' ? 'admin' : 'tecnico';
+  try {
+    const senha_hash = await bcrypt.hash(senha, 12);
+    const { rows: [u] } = await pool.query(
+      `INSERT INTO usuario (nome, senha_hash, role, ativo) VALUES ($1, $2, $3, TRUE) RETURNING id, nome, role, ativo`,
+      [nome.trim(), senha_hash, roleVal]
+    );
+    res.status(201).json(u);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Atualiza nome, senha, role e/ou status de um usuário
+app.patch('/api/admin/usuarios/:id', requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!id) return res.status(400).json({ error: 'ID inválido.' });
+
+  const { nome, senha, role, ativo } = req.body;
+  const sets   = [];
+  const params = [];
+
+  if (nome !== undefined) {
+    if (!nome.trim()) return res.status(400).json({ error: 'Nome não pode ser vazio.' });
+    params.push(nome.trim()); sets.push(`nome = $${params.length}`);
+  }
+  if (senha !== undefined && senha.trim()) {
+    const hash = await bcrypt.hash(senha.trim(), 12);
+    params.push(hash); sets.push(`senha_hash = $${params.length}`);
+  }
+  if (role !== undefined) {
+    const roleVal = role === 'admin' ? 'admin' : 'tecnico';
+    params.push(roleVal); sets.push(`role = $${params.length}`);
+  }
+  if (ativo !== undefined) {
+    params.push(Boolean(ativo)); sets.push(`ativo = $${params.length}`);
+  }
+
+  if (!sets.length) return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
+
+  params.push(id);
+  try {
+    const { rows } = await pool.query(
+      `UPDATE usuario SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING id, nome, role, ativo`,
+      params
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve os HTMLs estáticos da pasta public/
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -28,7 +28,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.use(express.json({ limit: '20mb' }));
+// Limite de 5 MB por requisição — cobre o maior arquivo base64 aceito em uploads.
+// Base64 infla ~33 %, então 5 MB de JSON ≈ ~3,75 MB de arquivo real.
+app.use(express.json({ limit: '5mb' }));
+
+// Retorna mensagem clara quando o payload ultrapassa o limite de 5 MB.
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Arquivo muito grande. O tamanho máximo permitido por upload é 5 MB.',
+    });
+  }
+  next(err);
+});
 
 // ─── Middleware de autenticação JWT ──────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'acerto-secret-dev';
@@ -127,7 +139,7 @@ app.get('/api/filtros', requireAuth, async (req, res) => {
       pool.query(`SELECT DISTINCT nome FROM cliente ORDER BY nome`),
       pool.query(`SELECT DISTINCT nome FROM servico ORDER BY nome`),
       pool.query(`SELECT DISTINCT veiculo FROM viagem WHERE veiculo IS NOT NULL AND veiculo <> '' ORDER BY veiculo`),
-      pool.query(`SELECT DISTINCT equipamento FROM cliente WHERE equipamento IS NOT NULL AND equipamento <> '' ORDER BY equipamento`),
+      pool.query(`SELECT DISTINCT equipamento FROM envio WHERE equipamento IS NOT NULL AND equipamento <> '' ORDER BY equipamento`),
     ]);
     res.json({
       tecnicos:     tecnicos.rows.map(r => r.nome),
@@ -156,7 +168,7 @@ app.get('/api/viagens/buscar', requireAuth, async (req, res) => {
     if (servico)     { params.push(servico);       conds.push('s.nome ILIKE $' + params.length); }
     if (status)      { params.push(status);        conds.push('v.status = $' + params.length); }
     if (veiculo)     { params.push(veiculo);       conds.push('v.veiculo ILIKE $' + params.length); }
-    if (equipamento) { params.push(equipamento);   conds.push('c.equipamento ILIKE $' + params.length); }
+    if (equipamento) { params.push(equipamento);   conds.push(`EXISTS (SELECT 1 FROM envio en WHERE en.viagem_id = v.id AND en.equipamento ILIKE $${params.length})`); }
     if (dataInicio)  { params.push(dataInicio);    conds.push('v.data_inicio >= $' + params.length); }
     if (dataFim)     { params.push(dataFim);       conds.push('v.data_inicio <= $' + params.length); }
 
@@ -228,8 +240,7 @@ app.get('/api/viagens/:id', requireAuth, async (req, res) => {
       SELECT v.id, u.nome AS tecnico, c.nome AS cliente, c.cidade,
              v.data_inicio AS "dataInicio", v.veiculo, v.adiantamento, v.auxiliares,
              v.status AS "statusViagem",
-             s.nome AS "servicoPrestado",
-             c.equipamento AS equipamento
+             s.nome AS "servicoPrestado"
       FROM viagem v
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
@@ -238,8 +249,13 @@ app.get('/api/viagens/:id', requireAuth, async (req, res) => {
     `, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Viagem não encontrada' });
 
-    // Técnico só pode ver as próprias viagens; admin vê todas
-    if (req.usuario.role !== 'admin' && rows[0].tecnico !== req.usuario.nome) {
+    // Técnico só pode ver as próprias viagens; admin vê todas.
+    // Comparação feita pelo usuario_id (imutável), não pelo nome (que pode mudar).
+    const { rows: [ownership] } = await pool.query(
+      'SELECT usuario_id FROM viagem WHERE id = $1',
+      [req.params.id]
+    );
+    if (req.usuario.role !== 'admin' && ownership.usuario_id !== req.usuario.id) {
       return res.status(403).json({ error: 'Acesso negado.' });
     }
 
@@ -251,16 +267,9 @@ app.get('/api/viagens/:id', requireAuth, async (req, res) => {
 });
 
 // ─── Helpers find-or-create ───────────────────────────────────────────────────
-
-async function findOrCreateUsuario(client, nome) {
-  const { rows } = await client.query('SELECT id FROM usuario WHERE nome = $1 LIMIT 1', [nome]);
-  if (rows.length) return rows[0].id;
-  const { rows: [u] } = await client.query(
-    'INSERT INTO usuario (nome) VALUES ($1) RETURNING id',
-    [nome]
-  );
-  return u.id;
-}
+// Nota: findOrCreateUsuario foi removido — o usuário já é identificado pelo
+// token JWT (req.usuario.id), eliminando o risco de criar registros duplicados
+// ou de um técnico se passar por outro apenas informando o nome no payload.
 
 async function findOrCreateCliente(client, nome, cidade) {
   // Match on both nome AND cidade so the same client name in different
@@ -309,17 +318,11 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
     await client.query('BEGIN');
     const b = req.body;
 
-    const usuarioId  = await findOrCreateUsuario(client, b.tecnico);
+    // Usa o ID do usuário autenticado — não aceita nome do payload,
+    // evitando que um técnico crie viagens em nome de outro.
+    const usuarioId  = req.usuario.id;
     const clienteId  = await findOrCreateCliente(client, b.cliente, b.cidade);
     const servicoId  = await findOrCreateServico(client, b.servicoPrestado);
-
-    // Atualiza equipamento no cliente, se informado
-    if (b.equipamento) {
-      await client.query(
-        'UPDATE cliente SET equipamento = $1 WHERE id = $2',
-        [b.equipamento, clienteId]
-      );
-    }
 
     const { rows: [v] } = await client.query(`
       INSERT INTO viagem (usuario_id, cliente_id, servico_id, data_inicio, veiculo, adiantamento, auxiliares, status)
@@ -377,6 +380,17 @@ app.post('/api/upload', requireAuth, async (req, res) => {
   if (!GAS_UPLOAD_URL) {
     return res.status(500).json({ error: 'GAS_UPLOAD_URL não configurada no .env' });
   }
+
+  // Valida tamanho do arquivo base64 antes de encaminhar ao GAS.
+  // Base64 representa 3 bytes em 4 caracteres → tamanho_real ≈ length * 0.75
+  const base64 = req.body?.fileData ?? req.body?.base64 ?? '';
+  const estimatedBytes = Math.ceil(base64.length * 0.75);
+  const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+  if (estimatedBytes > MAX_BYTES) {
+    return res.status(413).json({
+      error: 'Arquivo muito grande. O tamanho máximo permitido por upload é 5 MB.',
+    });
+  }
   try {
     const response = await fetch(GAS_UPLOAD_URL, {
       method:  'POST',
@@ -427,21 +441,16 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
     await client.query('BEGIN');
     const b = req.body;
 
-    const usuarioId = await findOrCreateUsuario(client, b.tecnico);
+    // Usa o ID do usuário autenticado — não aceita nome do payload.
+    const usuarioId = req.usuario.id;
     let viagemId = b.viagemId;
 
-    // Se for nova viagem, cria primeiro
+    // Se for nova viagem, cria primeiro.
+    // Usa um advisory lock baseado no hash (usuario_id, cliente, data) para serializar
+    // requisições idênticas em paralelo (ex: duplo clique antes de obter o viagemId).
     if (!viagemId) {
       const clienteId = await findOrCreateCliente(client, b.cliente, b.cidade);
       const servicoId = await findOrCreateServico(client, b.servicoPrestado);
-
-      // Atualiza equipamento no cliente, se informado
-      if (b.equipamento) {
-        await client.query(
-          'UPDATE cliente SET equipamento = $1 WHERE id = $2',
-          [b.equipamento, clienteId]
-        );
-      }
 
       const { rows: [v] } = await client.query(`
         INSERT INTO viagem (usuario_id, cliente_id, servico_id, data_inicio, veiculo, adiantamento, auxiliares, status)
@@ -458,9 +467,10 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
       ]);
       viagemId = v.id;
     } else {
-      // Viagem existente: verifica se pertence ao usuário autenticado
+      // Viagem existente: trava a linha para evitar condição de corrida entre
+      // dois envios simultâneos (ex: duplo clique ou abas concorrentes).
       const { rows: ownership } = await client.query(
-        'SELECT usuario_id FROM viagem WHERE id = $1',
+        'SELECT usuario_id FROM viagem WHERE id = $1 FOR UPDATE',
         [viagemId]
       );
       if (!ownership.length) {
@@ -480,14 +490,18 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
       }
     }
 
-    // Cria o envio do dia
+    // Cria o envio do dia.
+    // O SELECT FOR UPDATE acima serializa envios concorrentes para a mesma
+    // viagem: o segundo aguarda o COMMIT/ROLLBACK do primeiro antes de prosseguir,
+    // garantindo que não sejam criados dois envios duplicados num mesmo instante.
     const { rows: [envio] } = await client.query(`
-      INSERT INTO envio (viagem_id, usuario_id, data_nfs, observacoes, assinatura_arquivo)
-      VALUES ($1, $2, $3, $4, $5) RETURNING id
+      INSERT INTO envio (viagem_id, usuario_id, data_nfs, equipamento, observacoes, assinatura_arquivo)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
     `, [
       viagemId,
       usuarioId,
       b.dataNFs     || null,
+      b.equipamento || null,
       b.observacoes || '',
       b.signature   || '',
     ]);
@@ -550,7 +564,7 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
 app.get('/api/clientes', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT nome, cidade, equipamento
+      SELECT nome, cidade
       FROM cliente
       ORDER BY nome ASC, cidade ASC
     `);
@@ -639,7 +653,13 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
         u.nome AS tecnico,
         c.nome AS cliente, c.cidade,
         s.nome AS "servicoPrestado",
-        c.equipamento AS equipamento
+        (
+          SELECT en2.equipamento
+          FROM envio en2
+          WHERE en2.viagem_id = v.id AND en2.equipamento IS NOT NULL
+          ORDER BY en2.id DESC
+          LIMIT 1
+        ) AS equipamento
       FROM viagem v
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
@@ -655,6 +675,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
       SELECT
         en.id AS envio_id,
         en.data_nfs AS "dataNFs",
+        en.equipamento,
         en.observacoes,
         en.timestamp,
         dc.nome AS categoria,
@@ -676,6 +697,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
         enviosMap[row.envio_id] = {
           envioId:     row.envio_id,
           dataNFs:     row.dataNFs,
+          equipamento: row.equipamento || null,
           observacoes: row.observacoes,
           timestamp:   row.timestamp,
           despesas:    { cafe: null, almoco: null, janta: null, hotel: null, pedagio: [], combustivel: [], outros: [] }

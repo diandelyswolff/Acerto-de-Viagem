@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <title>Usuários — Acerto de Viagem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #eef1f6; --card: #ffffff; --border: #dde2ea;
+      --accent: #1a56db; --accent-dark: #1648c0; --accent-light: #eff4ff;
+      --text: #1b2537; --muted: #5f738f; --error: #c8000a;
+      --success-bg: #dcfce7; --success-fg: #14803c;
+      --warn-bg: #fef9c3; --warn-fg: #92400e;
+      --danger-bg: #fff1f1; --danger-fg: #c8000a;
+      --radius: 10px;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; padding: 2rem 2.5rem 3rem;
+    }
+
+    /* ── LAYOUT ── */
+    .page { width: 100%; display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start; }
+
+    /* ── SIDEBAR / HEADER CARD ── */
+    .sidebar { grid-column: 1; display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 2rem; }
+
+    .header-card {
+      background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
+      border-radius: 18px; padding: 1.5rem 1.75rem 1.75rem;
+      box-shadow: 0 4px 24px rgba(26,86,219,0.22);
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .header-top { display: flex; align-items: center; gap: 0.85rem; }
+    .header-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .header-texts h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .header-texts p  { color: rgba(255,255,255,0.68); font-size: 0.76rem; margin-top: 0.15rem; }
+
+    .btn-novo {
+      background: #fff; color: var(--accent); border: none;
+      padding: 0.65rem 1rem; border-radius: 9999px;
+      font-size: 0.85rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-novo:hover { background: #f0f5ff; transform: translateY(-1px); }
+
+    .nav-links { display: flex; flex-direction: column; gap: 0.4rem; }
+    .nav-link {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.6rem 0.85rem; border-radius: 9px;
+      font-size: 0.82rem; font-weight: 600;
+      color: rgba(255,255,255,0.72); text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .nav-link.active { background: rgba(255,255,255,0.18); color: #fff; }
+    .nav-link svg { flex-shrink: 0; opacity: 0.8; }
+
+    /* ── LISTA DE USUÁRIOS ── */
+    .main { grid-column: 2; display: flex; flex-direction: column; gap: 1rem; }
+
+    .users-card {
+      background: var(--card); border-radius: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+      overflow: hidden;
+    }
+    .users-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border);
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent);
+    }
+    .users-count {
+      background: var(--accent-light); color: var(--accent);
+      font-size: 0.62rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 9999px;
+    }
+
+    .user-row {
+      display: grid; grid-template-columns: 1fr auto auto auto;
+      align-items: center; gap: 1rem;
+      padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    .user-row:last-child { border-bottom: none; }
+    .user-row:hover { background: #fafbfd; }
+    .user-row.inativo { opacity: 0.5; }
+
+    .user-info { min-width: 0; }
+    .user-nome { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+    .user-meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem; }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: 0.62rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 9999px;
+      letter-spacing: 0.03em; text-transform: uppercase;
+    }
+    .badge-admin  { background: var(--accent-light); color: var(--accent); }
+    .badge-tecnico { background: #f1f5f9; color: #475569; }
+    .badge-inativo { background: var(--danger-bg); color: var(--danger-fg); }
+    .badge-ativo   { background: var(--success-bg); color: var(--success-fg); }
+
+    .user-actions { display: flex; align-items: center; gap: 0.4rem; }
+    .btn-icon {
+      width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border);
+      background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--muted); transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .btn-icon:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-icon.danger:hover { border-color: var(--error); color: var(--error); background: var(--danger-bg); }
+    .btn-icon.success:hover { border-color: var(--success-fg); color: var(--success-fg); background: var(--success-bg); }
+
+    /* ── MODAL ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.45);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem; z-index: 100; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--card); border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      width: 100%; max-width: 420px;
+      transform: translateY(16px) scale(0.98);
+      transition: transform 0.2s;
+      overflow: hidden;
+    }
+    .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+
+    .modal-header {
+      background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
+      padding: 1.5rem 1.75rem;
+      display: flex; align-items: center; gap: 0.85rem;
+    }
+    .modal-header-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .modal-header h2 { font-size: 1rem; font-weight: 700; color: #fff; }
+    .modal-header p  { font-size: 0.75rem; color: rgba(255,255,255,0.65); margin-top: 0.15rem; }
+
+    .modal-body { padding: 1.5rem 1.75rem 1.75rem; display: flex; flex-direction: column; gap: 1rem; }
+
+    .field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .field label { font-size: 0.72rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+    .field input, .field select {
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 0.65rem 0.85rem; font-size: 0.9rem;
+      font-family: 'DM Sans', sans-serif; color: var(--text);
+      background: #fff; outline: none; width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+    }
+    .field-hint { font-size: 0.71rem; color: var(--muted); margin-top: 0.15rem; }
+
+    .modal-actions { display: flex; gap: 0.65rem; justify-content: flex-end; }
+
+    .btn-cancel {
+      background: none; border: 1.5px solid var(--border); color: var(--muted);
+      padding: 0.6rem 1.25rem; border-radius: 9999px;
+      font-size: 0.85rem; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+    .btn-salvar {
+      background: var(--accent); color: #fff; border: none;
+      padding: 0.6rem 1.5rem; border-radius: 9999px;
+      font-size: 0.85rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+      box-shadow: 0 2px 10px rgba(26,86,219,0.28);
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-salvar:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    .btn-salvar:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 2rem; right: 2rem;
+      background: #1b2537; color: #fff;
+      padding: 0.75rem 1.25rem; border-radius: 12px;
+      font-size: 0.85rem; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+      transform: translateY(8px); opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; z-index: 200; display: flex; align-items: center; gap: 0.6rem;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { background: #14803c; }
+    .toast.err  { background: var(--error); }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 15px; height: 15px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.4); border-left-color: #fff;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      padding: 3rem 1.5rem; text-align: center; color: var(--muted); font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="header-card">
+      <div class="header-top">
+        <div class="header-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="header-texts">
+          <h1>Usuários</h1>
+          <p id="adminNome">Carregando…</p>
+        </div>
+      </div>
+
+      <button class="btn-novo" onclick="abrirModalCriar()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo usuário
+      </button>
+
+      <nav class="nav-links">
+        <a href="dashboard.html" class="nav-link">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <a href="usuarios.html" class="nav-link active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Usuários
+        </a>
+        <a href="#" class="nav-link" onclick="fazerLogout(); return false;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <div class="users-card">
+      <div class="users-card-header">
+        <span>Lista de usuários</span>
+        <span class="users-count" id="usersCount">—</span>
+      </div>
+      <div id="usersList"><div class="empty">Carregando…</div></div>
+    </div>
+  </main>
+</div>
+
+<!-- ── MODAL CRIAR / EDITAR ── -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="fecharModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-header-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="modalIcon">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/>
+        </svg>
+      </div>
+      <div>
+        <h2 id="modalTitulo">Novo usuário</h2>
+        <p id="modalSubtitulo">Preencha os dados abaixo</p>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <input type="hidden" id="modalUserId">
+
+      <div class="field">
+        <label for="modalNome">Nome completo</label>
+        <input type="text" id="modalNome" placeholder="Ex.: João da Silva" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="modalSenha" id="labelSenha">Senha</label>
+        <input type="password" id="modalSenha" placeholder="Digite a senha" autocomplete="new-password">
+        <span class="field-hint" id="hintSenha">Deixe em branco para não alterar a senha atual.</span>
+      </div>
+
+      <div class="field">
+        <label for="modalRole">Perfil</label>
+        <select id="modalRole">
+          <option value="tecnico">Técnico</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+
+      <div class="field" id="fieldAtivo" style="display:none;">
+        <label for="modalAtivo">Status</label>
+        <select id="modalAtivo">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </div>
+
+      <div id="modalErro" style="display:none; padding:0.65rem 0.85rem; border-radius:8px; font-size:0.82rem; font-weight:500; background:var(--danger-bg); color:var(--danger-fg); border:1px solid #fecaca;"></div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-salvar" id="btnSalvar" onclick="salvarUsuario()">
+          <span id="salvarLabel">Criar usuário</span>
+          <span class="spinner" id="salvarSpinner"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '/api';
+
+function getToken() { return localStorage.getItem('acerto_token') || ''; }
+
+async function apiFetch(path, options = {}) {
+  const token = getToken();
+  const res = await fetch(API_BASE + path, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+    },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── TOAST ──────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, tipo = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + tipo;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── CARREGAR LISTA ──────────────────────────────────────────────
+let _usuarios = [];
+
+async function carregarUsuarios() {
+  try {
+    _usuarios = await apiFetch('/admin/usuarios');
+    renderLista();
+  } catch(e) {
+    document.getElementById('usersList').innerHTML =
+      `<div class="empty">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function renderLista() {
+  const lista = document.getElementById('usersList');
+  const count = document.getElementById('usersCount');
+  count.textContent = _usuarios.length;
+
+  if (!_usuarios.length) {
+    lista.innerHTML = '<div class="empty">Nenhum usuário cadastrado.</div>';
+    return;
+  }
+
+  lista.innerHTML = _usuarios.map(u => `
+    <div class="user-row${u.ativo ? '' : ' inativo'}" data-id="${u.id}">
+      <div class="user-info">
+        <div class="user-nome">${esc(u.nome)}</div>
+        <div class="user-meta">
+          <span class="badge badge-${u.role}">${u.role === 'admin' ? 'Admin' : 'Técnico'}</span>
+          <span class="badge ${u.ativo ? 'badge-ativo' : 'badge-inativo'}">${u.ativo ? 'Ativo' : 'Inativo'}</span>
+        </div>
+      </div>
+
+      <button class="btn-icon" title="Editar" onclick="abrirModalEditar(${u.id})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+
+      ${u.ativo
+        ? `<button class="btn-icon danger" title="Desativar" onclick="toggleAtivo(${u.id}, false)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+           </button>`
+        : `<button class="btn-icon success" title="Reativar" onclick="toggleAtivo(${u.id}, true)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+           </button>`
+      }
+    </div>
+  `).join('');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── MODAL ──────────────────────────────────────────────────────
+function abrirModalCriar() {
+  document.getElementById('modalUserId').value = '';
+  document.getElementById('modalNome').value   = '';
+  document.getElementById('modalSenha').value  = '';
+  document.getElementById('modalRole').value   = 'tecnico';
+  document.getElementById('modalTitulo').textContent    = 'Novo usuário';
+  document.getElementById('modalSubtitulo').textContent = 'Preencha os dados abaixo';
+  document.getElementById('salvarLabel').textContent    = 'Criar usuário';
+  document.getElementById('labelSenha').textContent     = 'Senha';
+  document.getElementById('hintSenha').style.display    = 'none';
+  document.getElementById('fieldAtivo').style.display   = 'none';
+  document.getElementById('modalErro').style.display    = 'none';
+  document.getElementById('modalBackdrop').classList.add('open');
+  setTimeout(() => document.getElementById('modalNome').focus(), 120);
+}
+
+function abrirModalEditar(id) {
+  const u = _usuarios.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('modalUserId').value = u.id;
+  document.getElementById('modalNome').value   = u.nome;
+  document.getElementById('modalSenha').value  = '';
+  document.getElementById('modalRole').value   = u.role;
+  document.getElementById('modalAtivo').value  = String(u.ativo);
+  document.getElementById('modalTitulo').textContent    = 'Editar usuário';
+  document.getElementById('modalSubtitulo').textContent = u.nome;
+  document.getElementById('salvarLabel').textContent    = 'Salvar alterações';
+  document.getElementById('labelSenha').textContent     = 'Nova senha';
+  document.getElementById('hintSenha').style.display    = '';
+  document.getElementById('fieldAtivo').style.display   = '';
+  document.getElementById('modalErro').style.display    = 'none';
+  document.getElementById('modalBackdrop').classList.add('open');
+  setTimeout(() => document.getElementById('modalNome').focus(), 120);
+}
+
+function fecharModal(e) {
+  if (e && e.target !== document.getElementById('modalBackdrop')) return;
+  document.getElementById('modalBackdrop').classList.remove('open');
+}
+
+// ── SALVAR (criar ou editar) ────────────────────────────────────
+async function salvarUsuario() {
+  const id    = document.getElementById('modalUserId').value;
+  const nome  = document.getElementById('modalNome').value.trim();
+  const senha = document.getElementById('modalSenha').value;
+  const role  = document.getElementById('modalRole').value;
+  const ativo = document.getElementById('modalAtivo').value === 'true';
+  const erroEl = document.getElementById('modalErro');
+
+  erroEl.style.display = 'none';
+  if (!nome) { erroEl.textContent = 'O nome é obrigatório.'; erroEl.style.display = ''; return; }
+  if (!id && !senha) { erroEl.textContent = 'A senha é obrigatória para novos usuários.'; erroEl.style.display = ''; return; }
+
+  const btn = document.getElementById('btnSalvar');
+  const spinner = document.getElementById('salvarSpinner');
+  btn.disabled = true; spinner.style.display = 'inline-block';
+
+  try {
+    if (id) {
+      // Edição
+      const body = { nome, role, ativo };
+      if (senha) body.senha = senha;
+      await apiFetch(`/admin/usuarios/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      showToast('Usuário atualizado com sucesso.', 'ok');
+    } else {
+      // Criação
+      await apiFetch('/admin/usuarios', {
+        method: 'POST',
+        body: JSON.stringify({ nome, senha, role }),
+      });
+      showToast('Usuário criado com sucesso.', 'ok');
+    }
+    document.getElementById('modalBackdrop').classList.remove('open');
+    await carregarUsuarios();
+  } catch(e) {
+    erroEl.textContent = e.message;
+    erroEl.style.display = '';
+  } finally {
+    btn.disabled = false; spinner.style.display = 'none';
+  }
+}
+
+// ── ATIVAR / DESATIVAR ──────────────────────────────────────────
+async function toggleAtivo(id, ativo) {
+  try {
+    await apiFetch(`/admin/usuarios/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ativo }),
+    });
+    showToast(ativo ? 'Usuário reativado.' : 'Usuário desativado.', 'ok');
+    await carregarUsuarios();
+  } catch(e) {
+    showToast(e.message, 'err');
+  }
+}
+
+// ── LOGOUT ─────────────────────────────────────────────────────
+function fazerLogout() {
+  localStorage.removeItem('acerto_token');
+  window.location.href = 'login.html';
+}
+
+// ── TECLAS ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('modalBackdrop').classList.remove('open');
+  if (e.key === 'Enter' && document.getElementById('modalBackdrop').classList.contains('open')) salvarUsuario();
+});
+
+// ── INIT ───────────────────────────────────────────────────────
+(async () => {
+  try {
+    if (!getToken()) throw new Error('sem token');
+    const me = await apiFetch('/auth/me');
+    if (me.role !== 'admin') { window.location.href = 'index.html'; return; }
+    document.getElementById('adminNome').innerHTML =
+      `${me.nome} &nbsp;<a href="#" onclick="fazerLogout()" style="color:rgba(255,255,255,0.55);font-size:0.72rem;text-decoration:none;">Sair</a>`;
+  } catch(e) {
+    window.location.href = 'login.html'; return;
+  }
+  await carregarUsuarios();
+})();
+</script>
+</body>
+</html>

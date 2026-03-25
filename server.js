@@ -731,7 +731,20 @@ app.patch('/api/admin/viagens/:id', requireAdmin, async (req, res) => {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: `Técnico "${b.tecnico}" não encontrado ou inativo.` });
       }
-      await client.query('UPDATE viagem SET usuario_id = $1 WHERE id = $2', [rows[0].id, viagemId]);
+    
+      const novoUsuarioId = rows[0].id;
+    
+      // Atualiza a viagem
+      await client.query(
+        'UPDATE viagem SET usuario_id = $1 WHERE id = $2',
+        [novoUsuarioId, viagemId]
+      );
+    
+      // 🔥 Atualiza TODOS os envios da viagem
+      await client.query(
+        'UPDATE envio SET usuario_id = $1 WHERE viagem_id = $2',
+        [novoUsuarioId, viagemId]
+      );
     }
 
     // Resolve cliente_id a partir de nome + cidade (find-or-create)

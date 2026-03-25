@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <title>Editar Viagem — Acerto de Viagem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #eef1f6; --card: #ffffff; --border: #dde2ea;
+      --accent: #1a56db; --accent-dark: #1648c0; --accent-light: #eff4ff;
+      --text: #1b2537; --muted: #5f738f; --error: #c8000a;
+      --success-bg: #dcfce7; --success-fg: #14803c;
+      --warn-bg: #fef9c3;  --warn-fg: #92400e;
+      --danger-bg: #fff1f1; --danger-fg: #c8000a;
+      --pix-bg: #fef9c3; --pix-fg: #92400e;
+      --corp-bg: #dbeafe; --corp-fg: #1e3a7a;
+      --radius: 10px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 2.5rem 4rem; }
+
+    /* ── LAYOUT ── */
+    .page { width: 100%; display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; align-items: start; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { grid-column: 1; display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 2rem; }
+    .header-card {
+      background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
+      border-radius: 18px; padding: 1.5rem 1.75rem 1.75rem;
+      box-shadow: 0 4px 24px rgba(26,86,219,0.22);
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .header-top { display: flex; align-items: center; gap: 0.85rem; }
+    .header-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .header-texts h1 { font-size: 1.05rem; font-weight: 700; color: #fff; }
+    .header-texts p  { color: rgba(255,255,255,0.65); font-size: 0.74rem; margin-top: 0.15rem; }
+    .nav-links { display: flex; flex-direction: column; gap: 0.35rem; }
+    .nav-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.85rem; border-radius: 9px; font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.72); text-decoration: none; transition: background 0.15s, color 0.15s; }
+    .nav-link:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .nav-link.active { background: rgba(255,255,255,0.18); color: #fff; }
+
+    /* ── MAIN ── */
+    .main { grid-column: 2; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── SECTION CARD ── */
+    .section-card { background: var(--card); border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; }
+    .section-header {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border);
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+    }
+    .section-header svg { color: var(--accent); flex-shrink: 0; }
+    .section-body { padding: 1.25rem; }
+
+    /* ── FORM GRID ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .field { display: flex; flex-direction: column; gap: 0.32rem; }
+    .field label { font-size: 0.7rem; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .field input, .field select, .field textarea {
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 0.6rem 0.85rem; font-size: 0.88rem;
+      font-family: 'DM Sans', sans-serif; color: var(--text);
+      background: #fff; outline: none; width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field textarea { resize: vertical; min-height: 72px; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+
+    /* ── SAVE ROW ── */
+    .save-row { display: flex; align-items: center; justify-content: flex-end; gap: 0.65rem; padding-top: 0.5rem; }
+    .btn-salvar {
+      background: var(--accent); color: #fff; border: none;
+      padding: 0.6rem 1.5rem; border-radius: 9999px;
+      font-size: 0.85rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;
+      box-shadow: 0 2px 10px rgba(26,86,219,0.28);
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-salvar:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    .btn-salvar:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4); border-left-color: #fff; animation: spin 0.7s linear infinite; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── ENVIOS ── */
+    .envio-block { border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1rem; }
+    .envio-block:last-child { margin-bottom: 0; }
+    .envio-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.7rem 1rem; background: #f8fafc; border-bottom: 1.5px solid var(--border);
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted);
+    }
+    .envio-id { font-size: 0.68rem; background: var(--accent-light); color: var(--accent); padding: 0.1rem 0.5rem; border-radius: 9999px; font-weight: 700; }
+    .envio-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.9rem; }
+
+    /* ── DESPESAS TABLE ── */
+    .despesas-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    .despesa-row { display: grid; align-items: center; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
+    .despesa-row:last-child { border-bottom: none; }
+    .despesa-row.simples { grid-template-columns: 120px 120px 160px; }
+    .despesa-row.multi   { grid-template-columns: 24px 100px 120px 160px; }
+    .despesa-cat { font-size: 0.8rem; font-weight: 600; color: var(--text); text-transform: capitalize; }
+    .despesa-slot { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+    .despesa-input {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 0.42rem 0.7rem; font-size: 0.83rem;
+      font-family: 'DM Sans', sans-serif; color: var(--text); background: #fff; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .despesa-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+    .pag-select { border: 1.5px solid var(--border); border-radius: 8px; padding: 0.42rem 0.6rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; color: var(--text); background: #fff; outline: none; cursor: pointer; transition: border-color 0.15s; }
+    .pag-select:focus { border-color: var(--accent); }
+    .pag-pix  { border-color: #fde68a; background: var(--pix-bg); color: var(--pix-fg); }
+    .pag-corp { border-color: #93c5fd; background: var(--corp-bg); color: var(--corp-fg); }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: #1b2537; color: #fff; padding: 0.75rem 1.25rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.22); transform: translateY(8px); opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 200; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok  { background: #14803c; }
+    .toast.err { background: var(--error); }
+
+    /* ── SKELETON ── */
+    .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 8px; height: 18px; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── EMPTY / ERROR ── */
+    .state-msg { padding: 2.5rem 1.5rem; text-align: center; color: var(--muted); font-size: 0.88rem; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="header-card">
+      <div class="header-top">
+        <div class="header-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </div>
+        <div class="header-texts">
+          <h1 id="sidebarTitulo">Editar Viagem</h1>
+          <p id="adminNome">Carregando…</p>
+        </div>
+      </div>
+      <nav class="nav-links">
+        <a href="dashboard.html" class="nav-link">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <a href="usuarios.html" class="nav-link">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Usuários
+        </a>
+        <a href="#" class="nav-link" onclick="fazerLogout(); return false;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main" id="mainContent">
+    <div class="state-msg">Carregando viagem…</div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '/api';
+let _viagemId = null;
+let _opcoes   = {};   // { tecnicos, clientes, servicos }
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('acerto_token') || ''; }
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API_BASE + path, {
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+    ...options,
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    throw new Error(b.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+let _toastTimer;
+function showToast(msg, tipo = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + tipo;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtData(v) {
+  if (!v) return '';
+  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : String(v);
+}
+
+function pagClass(val) {
+  if (val === 'dinheiro_pix') return 'pag-pix';
+  if (val === 'cartao_corp')  return 'pag-corp';
+  return '';
+}
+
+function pagSelect(name, val) {
+  const opts = [
+    ['', '— pagamento —'],
+    ['dinheiro_pix', 'Dinheiro / Pix'],
+    ['cartao_corp',  'Cartão corporativo'],
+  ];
+  const cls = pagClass(val);
+  return `<select class="pag-select ${cls}" name="${name}" onchange="onPagChange(this)">
+    ${opts.map(([v,l]) => `<option value="${v}"${v===val?' selected':''}>${l}</option>`).join('')}
+  </select>`;
+}
+
+function onPagChange(sel) {
+  sel.className = 'pag-select ' + pagClass(sel.value);
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function datalistOpts(id, arr) {
+  return `<datalist id="${id}">${arr.map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
+}
+
+function renderViagem(v, opcoes) {
+  const tecnicos  = opcoes.tecnicos  || [];
+  const clientes  = opcoes.clientes  || [];
+  const servicos  = opcoes.servicos  || [];
+
+  return `
+  <!-- ── DADOS DA VIAGEM ── -->
+  <div class="section-card">
+    <div class="section-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Dados da viagem
+    </div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Técnico</label>
+          <input id="vTecnico" list="listTecnicos" value="${esc(v.tecnico)}" placeholder="Nome do técnico">
+          ${datalistOpts('listTecnicos', tecnicos)}
+        </div>
+        <div class="field">
+          <label>Data de início</label>
+          <input id="vDataInicio" type="date" value="${fmtData(v.dataInicio)}">
+        </div>
+        <div class="field">
+          <label>Cliente</label>
+          <input id="vCliente" list="listClientes" value="${esc(v.cliente)}" placeholder="Nome do cliente">
+          ${datalistOpts('listClientes', clientes)}
+        </div>
+        <div class="field">
+          <label>Cidade</label>
+          <input id="vCidade" value="${esc(v.cidade)}">
+        </div>
+        <div class="field">
+          <label>Serviço prestado</label>
+          <input id="vServico" list="listServicos" value="${esc(v.servicoPrestado ?? '')}" placeholder="Ex.: Instalação">
+          ${datalistOpts('listServicos', servicos)}
+        </div>
+        <div class="field">
+          <label>Veículo</label>
+          <input id="vVeiculo" value="${esc(v.veiculo ?? '')}">
+        </div>
+        <div class="field">
+          <label>Adiantamento (R$)</label>
+          <input id="vAdiantamento" type="number" min="0" step="0.01" value="${parseFloat(v.adiantamento||0).toFixed(2)}">
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="vStatus">
+            <option value="Em Andamento"${v.status==='Em Andamento'?' selected':''}>Em Andamento</option>
+            <option value="Finalizada"${v.status==='Finalizada'?' selected':''}>Finalizada</option>
+          </select>
+        </div>
+        <div class="field span-2">
+          <label>Auxiliares (separados por vírgula)</label>
+          <input id="vAuxiliares" value="${esc((v.auxiliares||[]).join(', '))}">
+        </div>
+      </div>
+      <div class="save-row">
+        <button class="btn-salvar" onclick="salvarViagem(this)">
+          <span>Salvar viagem</span><span class="spinner"></span>
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEnvios(envios) {
+  if (!envios.length) return `<div class="section-card"><div class="state-msg">Nenhum envio registrado nesta viagem.</div></div>`;
+
+  const SIMPLES = ['cafe','almoco','janta','hotel'];
+  const MULTI   = ['pedagio','combustivel','outros'];
+  const LABEL   = { cafe:'Café', almoco:'Almoço', janta:'Janta', hotel:'Hotel', pedagio:'Pedágio', combustivel:'Combustível', outros:'Outros' };
+
+  return envios.map(en => {
+    const d = en.despesas;
+
+    const simplesRows = SIMPLES.map(cat => {
+      const v = d[cat];
+      if (!v) return '';
+      return `<div class="despesa-row simples">
+        <span class="despesa-cat">${LABEL[cat]}</span>
+        <input class="despesa-input" type="number" min="0" step="0.01"
+               data-envio="${en.envioId}" data-cat="${cat}" data-tipo="simples"
+               value="${v.valor.toFixed(2)}" placeholder="0,00">
+        ${pagSelect(`pag_${en.envioId}_${cat}`, v.pagamento)}
+      </div>`;
+    }).join('');
+
+    const multiRows = MULTI.flatMap(cat =>
+      (d[cat] || []).map(slot => `
+        <div class="despesa-row multi">
+          <span class="despesa-slot">#${slot.slot}</span>
+          <span class="despesa-cat">${LABEL[cat]}</span>
+          <input class="despesa-input" type="number" min="0" step="0.01"
+                 data-envio="${en.envioId}" data-cat="${cat}" data-slot="${slot.slot}" data-tipo="multi"
+                 value="${slot.valor.toFixed(2)}" placeholder="0,00">
+          ${pagSelect(`pag_${en.envioId}_${cat}_${slot.slot}`, slot.pagamento)}
+        </div>`)
+    ).join('');
+
+    const temDespesas = simplesRows || multiRows;
+
+    return `
+    <div class="section-card">
+      <div class="section-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Envio
+        <span class="envio-id">#${en.envioId}</span>
+      </div>
+      <div class="section-body">
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>Data das NFs</label>
+            <input id="eData_${en.envioId}" type="date" value="${fmtData(en.dataNFs)}">
+          </div>
+          <div class="field">
+            <label>Equipamento</label>
+            <input id="eEquip_${en.envioId}" value="${esc(en.equipamento ?? '')}">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label><!-- spacer -->
+          </div>
+          <div class="field span-3">
+            <label>Observações</label>
+            <textarea id="eObs_${en.envioId}">${esc(en.observacoes ?? '')}</textarea>
+          </div>
+        </div>
+
+        ${temDespesas ? `
+        <div style="margin-top:0.75rem;">
+          <div class="despesas-label">Despesas</div>
+          ${simplesRows}
+          ${multiRows}
+        </div>` : ''}
+
+        <div class="save-row">
+          <button class="btn-salvar" onclick="salvarEnvio(${en.envioId}, this)">
+            <span>Salvar envio</span><span class="spinner"></span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── SAVE HANDLERS ──────────────────────────────────────────────────────────
+async function salvarViagem(btn) {
+  const spinner = btn.querySelector('.spinner');
+  btn.disabled = true; spinner.style.display = 'inline-block';
+  try {
+    const tecnico    = document.getElementById('vTecnico').value.trim();
+    const dataInicio = document.getElementById('vDataInicio').value;
+    const cliente    = document.getElementById('vCliente').value.trim();
+    const cidade     = document.getElementById('vCidade').value.trim();
+    const servico    = document.getElementById('vServico').value.trim();
+    const veiculo    = document.getElementById('vVeiculo').value.trim();
+    const adiantamento = parseFloat(document.getElementById('vAdiantamento').value) || 0;
+    const status     = document.getElementById('vStatus').value;
+    const auxRaw     = document.getElementById('vAuxiliares').value;
+    const auxiliares = auxRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+    await apiFetch(`/admin/viagens/${_viagemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ tecnico, dataInicio, cliente, cidade, servico, veiculo, adiantamento, status, auxiliares }),
+    });
+    showToast('Viagem salva com sucesso.', 'ok');
+  } catch(e) {
+    showToast(e.message, 'err');
+  } finally {
+    btn.disabled = false; spinner.style.display = 'none';
+  }
+}
+
+async function salvarEnvio(envioId, btn) {
+  const spinner = btn.querySelector('.spinner');
+  btn.disabled = true; spinner.style.display = 'inline-block';
+  try {
+    const dataNFs     = document.getElementById(`eData_${envioId}`).value || null;
+    const equipamento = document.getElementById(`eEquip_${envioId}`).value.trim() || null;
+    const observacoes = document.getElementById(`eObs_${envioId}`).value;
+
+    // Coletar despesas deste envio
+    const despesas = [];
+    document.querySelectorAll(`[data-envio="${envioId}"]`).forEach(input => {
+      const cat   = input.dataset.cat;
+      const tipo  = input.dataset.tipo;
+      const slot  = input.dataset.slot ? parseInt(input.dataset.slot) : null;
+      const valor = parseFloat(input.value) || 0;
+      const pagKey = slot != null
+        ? `pag_${envioId}_${cat}_${slot}`
+        : `pag_${envioId}_${cat}`;
+      const pagEl  = document.querySelector(`[name="${pagKey}"]`);
+      const pagamento = pagEl ? pagEl.value : '';
+      despesas.push({ cat, tipo, slot, valor, pagamento });
+    });
+
+    await apiFetch(`/admin/envios/${envioId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ dataNFs, equipamento, observacoes, despesas }),
+    });
+    showToast(`Envio #${envioId} salvo.`, 'ok');
+  } catch(e) {
+    showToast(e.message, 'err');
+  } finally {
+    btn.disabled = false; spinner.style.display = 'none';
+  }
+}
+
+// ── LOGOUT ─────────────────────────────────────────────────────────────────
+function fazerLogout() {
+  localStorage.removeItem('acerto_token');
+  window.location.href = 'login.html';
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+(async () => {
+  // Auth guard
+  try {
+    if (!getToken()) throw new Error();
+    const me = await apiFetch('/auth/me');
+    if (me.role !== 'admin') { window.location.href = 'index.html'; return; }
+    document.getElementById('adminNome').innerHTML =
+      `${esc(me.nome)} &nbsp;<a href="#" onclick="fazerLogout()" style="color:rgba(255,255,255,0.55);font-size:0.72rem;text-decoration:none;">Sair</a>`;
+  } catch(e) {
+    window.location.href = 'login.html'; return;
+  }
+
+  // Viagem ID from query string
+  _viagemId = new URLSearchParams(window.location.search).get('id');
+  if (!_viagemId) {
+    document.getElementById('mainContent').innerHTML =
+      `<div class="section-card"><div class="state-msg">Nenhuma viagem selecionada. <a href="dashboard.html">Voltar ao dashboard</a></div></div>`;
+    return;
+  }
+
+  document.getElementById('sidebarTitulo').textContent = `Viagem #${_viagemId}`;
+
+  try {
+    const [resumo, filtros] = await Promise.all([
+      apiFetch(`/viagens/${_viagemId}/resumo`),
+      apiFetch('/filtros'),
+    ]);
+    _opcoes = filtros;
+
+    document.getElementById('mainContent').innerHTML =
+      renderViagem(resumo.viagem, filtros) +
+      renderEnvios(resumo.envios);
+
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML =
+      `<div class="section-card"><div class="state-msg">Erro ao carregar: ${esc(e.message)}</div></div>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -2,9 +2,10 @@
   "name": "acerto-api",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "gerar-token": "node gerarToken.js"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +18,10 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "googleapis": "^146.0.0",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.20.0"
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.20.0",
+    "@google-cloud/local-auth": "^3.0.1"
   }
 }

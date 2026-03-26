@@ -268,10 +268,7 @@ function esc(s) {
 
 function fmtDt(v) {
   if (!v) return '—';
-  // Substitui o espaço por 'T' para formato ISO 8601 sem fuso horário.
-  // Isso garante que o navegador interprete a data como horário LOCAL (BRT),
-  // e não como UTC — o que causaria um atraso de 3 horas na exibição.
-  const normalized = typeof v === 'string' ? v.replace(' ', 'T') : v;
+  const normalized = typeof v === 'string' ? v.replace(' ', 'T').replace('Z', '') : v;
   const d = new Date(normalized);
   return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 }

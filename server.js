@@ -895,6 +895,15 @@ app.delete('/api/admin/viagens/:id', requireAdmin, async (req, res) => {
       [req.usuario.id, `Cascata — viagem #${viagemId} excluída. Motivo: ${motivo.trim()}`, viagemId]
     );
 
+    // Cascata: soft delete em todas as despesas dos envios da viagem
+    await client.query(
+      `UPDATE despesa
+          SET deleted_at = NOW(), deleted_by = $1, deleted_reason = $2
+        WHERE envio_id IN (SELECT id FROM envio WHERE viagem_id = $3)
+          AND deleted_at IS NULL`,
+      [req.usuario.id, `Cascata — viagem #${viagemId} excluída. Motivo: ${motivo.trim()}`, viagemId]
+    );
+
     await client.query('COMMIT');
     res.json({ ok: true });
   } catch (err) {
@@ -906,7 +915,7 @@ app.delete('/api/admin/viagens/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// ─── Soft Delete de envio (somente admin) ────────────────────────────────────
+// ─── Soft Delete de envio (somente admin) — cascata para despesas ────────────
 // DELETE /api/admin/envios/:id
 // Body: { motivo: string }
 app.delete('/api/admin/envios/:id', requireAdmin, async (req, res) => {
@@ -918,33 +927,56 @@ app.delete('/api/admin/envios/:id', requireAdmin, async (req, res) => {
     return res.status(400).json({ error: 'O motivo da exclusão é obrigatório.' });
   }
 
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
+    await client.query('BEGIN');
+
+    // Soft delete do envio
+    const { rows } = await client.query(
       `UPDATE envio
           SET deleted_at = NOW(), deleted_by = $1, deleted_reason = $2
         WHERE id = $3 AND deleted_at IS NULL
         RETURNING id`,
       [req.usuario.id, motivo.trim(), envioId]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Envio não encontrado ou já excluído.' });
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Envio não encontrado ou já excluído.' });
+    }
+
+    // Cascata: soft delete em todas as despesas do envio
+    await client.query(
+      `UPDATE despesa
+          SET deleted_at = NOW(), deleted_by = $1, deleted_reason = $2
+        WHERE envio_id = $3 AND deleted_at IS NULL`,
+      [req.usuario.id, `Cascata — envio #${envioId} excluído. Motivo: ${motivo.trim()}`, envioId]
+    );
+
+    await client.query('COMMIT');
     res.json({ ok: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
-// ─── Exclui uma despesa (somente admin) ──────────────────────────────────────
-// DELETE /api/admin/despesas/:id  — exclusão física (despesas não têm soft delete)
+// ─── Soft Delete de despesa (somente admin) ──────────────────────────────────
+// DELETE /api/admin/despesas/:id
 app.delete('/api/admin/despesas/:id', requireAdmin, async (req, res) => {
   const despesaId = parseInt(req.params.id);
   if (!despesaId) return res.status(400).json({ error: 'ID inválido.' });
   try {
     const { rows } = await pool.query(
-      'DELETE FROM despesa WHERE id = $1 RETURNING id',
-      [despesaId]
+      `UPDATE despesa
+          SET deleted_at = NOW(), deleted_by = $1, deleted_reason = 'Excluída manualmente pelo administrador'
+        WHERE id = $2 AND deleted_at IS NULL
+        RETURNING id`,
+      [req.usuario.id, despesaId]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Despesa não encontrada.' });
+    if (!rows.length) return res.status(404).json({ error: 'Despesa não encontrada ou já excluída.' });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -1065,7 +1097,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
         d.pagamento,
         d.slot_numero AS slot
       FROM envio en
-      LEFT JOIN despesa d ON d.envio_id = en.id
+      LEFT JOIN despesa d ON d.envio_id = en.id AND d.deleted_at IS NULL
       LEFT JOIN despesa_categoria dc ON dc.id = d.categoria_id
       WHERE en.viagem_id = $1 AND en.deleted_at IS NULL
       ORDER BY en.data_nfs ASC, en.id ASC, d.slot_numero ASC NULLS FIRST

@@ -164,6 +164,59 @@
     .btn-vincular-drive:hover:not(:disabled) { background: var(--accent); color: #fff; }
     .btn-vincular-drive:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    /* ── Soft Delete ── */
+    .btn-deletar {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 0.9rem; border-radius: 9999px; font-size: 0.78rem;
+      font-weight: 700; font-family: 'DM Sans', sans-serif;
+      background: #fff0f0; color: #c0392b;
+      border: 1.5px solid #f5c6c2; text-decoration: none;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-deletar:hover { background: #fde8e8; }
+    .btn-deletar-envio {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.72rem;
+      font-weight: 700; font-family: 'DM Sans', sans-serif;
+      background: #fff0f0; color: #c0392b;
+      border: 1.5px solid #f5c6c2; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-deletar-envio:hover { background: #fde8e8; }
+
+    /* Modal */
+    .sd-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .sd-overlay.open { display: flex; }
+    .sd-modal {
+      background: #fff; border-radius: 14px; padding: 1.75rem;
+      width: min(420px, 90vw); box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .sd-modal h3 { margin: 0; font-size: 1rem; color: var(--text); }
+    .sd-modal p  { margin: 0; font-size: 0.83rem; color: var(--muted); }
+    .sd-modal textarea {
+      width: 100%; box-sizing: border-box; border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 0.6rem 0.75rem; font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem; resize: vertical; min-height: 80px; outline: none;
+    }
+    .sd-modal textarea:focus { border-color: var(--accent); }
+    .sd-modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; }
+    .sd-btn-cancel {
+      padding: 0.5rem 1.1rem; border-radius: 9999px; border: 1.5px solid var(--border);
+      background: #fff; font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+      font-weight: 700; cursor: pointer; color: var(--muted);
+    }
+    .sd-btn-confirm {
+      padding: 0.5rem 1.1rem; border-radius: 9999px; border: none;
+      background: #c0392b; color: #fff; font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.15s;
+    }
+    .sd-btn-confirm:hover { background: #a93226; }
+    .sd-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
     .viagem-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.25rem 1.5rem 0; }
     .viagem-id { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1; }
     .viagem-id span { color: var(--accent); }
@@ -305,6 +358,11 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Editar
             </a>
+            <button id="btnDeletarViagem" onclick="abrirModalDelete('viagem')"
+                    style="display:none;" class="btn-deletar">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Excluir
+            </button>
             <div id="dStatusBadge"></div>
           </div>
         </div>
@@ -540,6 +598,7 @@ function buscarPorId() {
 }
 
 async function abrirViagem(id) {
+  _sdViagemId = id; // guarda para recarregar após soft delete de envio
   document.querySelectorAll('.recente-item').forEach(el => el.classList.remove('selected'));
   const ri = document.getElementById('ri-' + id);
   if (ri) ri.classList.add('selected');
@@ -563,6 +622,10 @@ function renderDashboard({ viagem, envios, totais }) {
   document.getElementById('dSubtitle').textContent = [viagem.tecnico, viagem.cliente, viagem.cidade].filter(Boolean).join(' · ');
   const btnEditar = document.getElementById('btnEditar');
   if (btnEditar) { btnEditar.href = `editar-viagem.html?id=${viagem.id}`; btnEditar.style.display = 'inline-flex'; }
+
+  // Botão excluir viagem (admin)
+  const btnDel = document.getElementById('btnDeletarViagem');
+  if (btnDel) { btnDel.style.display = 'inline-flex'; btnDel.dataset.id = viagem.id; }
 
   const cls = statusCls(viagem.status);
   document.getElementById('dStatusBadge').innerHTML =
@@ -611,14 +674,19 @@ function renderDashboard({ viagem, envios, totais }) {
       return v ? `<td>${fmtMoeda(v)}${payTag(p)}</td>` : `<td><span class="dash">—</span></td>`;
     });
     grandTotal += dia;
-    return `<tr><td>${fmtData(en.dataNFs)}</td>${cells.join('')}${dia?`<td class="td-total">${fmtMoeda(dia)}</td>`:`<td><span class="dash">—</span></td>`}</tr>`;
+    return `<tr>
+      <td>${fmtData(en.dataNFs)}</td>${cells.join('')}${dia?`<td class="td-total">${fmtMoeda(dia)}</td>`:`<td><span class="dash">—</span></td>`}
+      <td><button class="btn-deletar-envio" onclick="abrirModalDelete('envio',${en.envioId})" title="Excluir envio">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button></td>
+    </tr>`;
   });
 
   const tfootCells = CATS.map(({key}) => colTotals[key] ? `<td>${fmtMoeda(colTotals[key])}</td>` : `<td><span class="dash">—</span></td>`);
   document.getElementById('dTabelaWrap').innerHTML = `<table>
-    <thead><tr><th>Data NF</th>${CATS.map(c=>`<th>${c.label}</th>`).join('')}<th>Total Dia</th></tr></thead>
+    <thead><tr><th>Data NF</th>${CATS.map(c=>`<th>${c.label}</th>`).join('')}<th>Total Dia</th><th></th></tr></thead>
     <tbody>${rows.join('')}</tbody>
-    <tfoot><tr><td>TOTAL</td>${tfootCells.join('')}<td style="color:var(--accent-dark)">${fmtMoeda(grandTotal)}</td></tr></tfoot>
+    <tfoot><tr><td>TOTAL</td>${tfootCells.join('')}<td style="color:var(--accent-dark)">${fmtMoeda(grandTotal)}</td><td></td></tr></tfoot>
   </table>`;
 
   const obsEntries = envios
@@ -695,10 +763,92 @@ window.addEventListener('load', async () => {
   else setMainState('emptyBox');
 });
 
+// ── Soft Delete ───────────────────────────────────────────────────────────────
+let _sdTipo   = null; // 'viagem' | 'envio'
+let _sdId     = null;
+let _sdViagemId = null; // viagem atual (para recarregar após delete de envio)
+
+function abrirModalDelete(tipo, id) {
+  _sdTipo = tipo;
+  if (tipo === 'viagem') {
+    _sdId = parseInt(document.getElementById('btnDeletarViagem').dataset.id);
+    _sdViagemId = _sdId;
+    document.getElementById('sdTitle').textContent = 'Excluir viagem #' + _sdId;
+    document.getElementById('sdDesc').textContent  = 'A viagem e todos os seus dados serão ocultados do sistema. O registro permanece no banco de dados.';
+  } else {
+    _sdId = id;
+    document.getElementById('sdTitle').textContent = 'Excluir envio #' + id;
+    document.getElementById('sdDesc').textContent  = 'Este envio será ocultado do resumo da viagem. O registro permanece no banco de dados.';
+  }
+  document.getElementById('sdMotivo').value = '';
+  document.getElementById('sdBtnConfirm').disabled = false;
+  document.getElementById('sdOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('sdMotivo').focus(), 50);
+}
+
+function fecharModalDelete() {
+  document.getElementById('sdOverlay').classList.remove('open');
+  _sdTipo = null; _sdId = null;
+}
+
+async function confirmarDelete() {
+  const motivo = document.getElementById('sdMotivo').value.trim();
+  if (!motivo) { document.getElementById('sdMotivo').focus(); return; }
+
+  const btn = document.getElementById('sdBtnConfirm');
+  btn.disabled = true; btn.textContent = 'Excluindo...';
+
+  try {
+    const endpoint = _sdTipo === 'viagem'
+      ? `/api/admin/viagens/${_sdId}`
+      : `/api/admin/envios/${_sdId}`;
+
+    const res = await fetch(endpoint, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+      body: JSON.stringify({ motivo }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+    fecharModalDelete();
+
+    if (_sdTipo === 'viagem') {
+      // Volta para lista vazia e recarrega recentes
+      setMainState('emptyBox');
+      await carregarRecentes();
+    } else {
+      // Recarrega o resumo da viagem atual
+      await abrirViagem(_sdViagemId);
+    }
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'Confirmar exclusão';
+    alert('Erro ao excluir: ' + err.message);
+  }
+}
+
+// Fecha modal ao clicar no overlay
+document.getElementById('sdOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('sdOverlay')) fecharModalDelete();
+});
+
 async function fazerLogout() {
   localStorage.removeItem('acerto_token');
   window.location.href = 'login.html';
 }
 </script>
+<!-- ── Modal Soft Delete ────────────────────────────────────── -->
+<div class="sd-overlay" id="sdOverlay">
+  <div class="sd-modal">
+    <h3 id="sdTitle">Confirmar exclusão</h3>
+    <p id="sdDesc">Esta ação marca o registro como excluído. Ele não será exibido no sistema, mas permanece no banco de dados.</p>
+    <textarea id="sdMotivo" placeholder="Informe o motivo da exclusão..."></textarea>
+    <div class="sd-modal-actions">
+      <button class="sd-btn-cancel" onclick="fecharModalDelete()">Cancelar</button>
+      <button class="sd-btn-confirm" id="sdBtnConfirm" onclick="confirmarDelete()">Confirmar exclusão</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

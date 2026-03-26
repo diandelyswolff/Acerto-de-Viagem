@@ -98,6 +98,7 @@ app.get('/api/viagens', requireAuth, async (req, res) => {
       JOIN cliente c ON c.id = v.cliente_id
       WHERE v.status = 'Em Andamento'
         AND v.usuario_id = $1
+        AND v.deleted_at IS NULL
       ORDER BY v.created_at DESC
     `, [req.usuario.id]);
     res.json(rows);
@@ -120,6 +121,7 @@ app.get('/api/viagens/recentes', requireAuth, async (req, res) => {
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
       LEFT JOIN servico s ON s.id = v.servico_id
+      WHERE v.deleted_at IS NULL
       ORDER BY v.id DESC
       LIMIT $1
     `, [limit]);
@@ -159,7 +161,7 @@ app.get('/api/filtros', requireAuth, async (req, res) => {
 app.get('/api/viagens/buscar', requireAuth, async (req, res) => {
   try {
     const { tecnico, cliente, servico, status, veiculo, equipamento, dataInicio, dataFim, id, offset } = req.query;
-    const conds  = [];
+    const conds  = ['v.deleted_at IS NULL'];
     const params = [];
 
     if (id)          { params.push(parseInt(id)); conds.push('v.id = $' + params.length); }
@@ -172,7 +174,7 @@ app.get('/api/viagens/buscar', requireAuth, async (req, res) => {
     if (dataInicio)  { params.push(dataInicio);    conds.push('v.data_inicio >= $' + params.length); }
     if (dataFim)     { params.push(dataFim);       conds.push('v.data_inicio <= $' + params.length); }
 
-    const where   = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+    const where   = 'WHERE ' + conds.join(' AND ');
     const limit   = 10;
     const off     = Math.max(0, parseInt(offset) || 0);
     const pLimit  = params.length + 1;
@@ -245,7 +247,7 @@ app.get('/api/viagens/:id', requireAuth, async (req, res) => {
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
       LEFT JOIN servico s ON s.id = v.servico_id
-      WHERE v.id = $1
+      WHERE v.id = $1 AND v.deleted_at IS NULL
     `, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Viagem não encontrada' });
 
@@ -856,7 +858,68 @@ app.patch('/api/admin/envios/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// Serve os HTMLs estáticos da pasta public/
+// ─── Soft Delete de viagem (somente admin) ───────────────────────────────────
+// DELETE /api/admin/viagens/:id
+// Body: { motivo: string }
+app.delete('/api/admin/viagens/:id', requireAdmin, async (req, res) => {
+  const viagemId = parseInt(req.params.id);
+  if (!viagemId) return res.status(400).json({ error: 'ID inválido.' });
+
+  const { motivo } = req.body;
+  if (!motivo || !motivo.trim()) {
+    return res.status(400).json({ error: 'O motivo da exclusão é obrigatório.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE viagem
+          SET deleted_at = NOW(), deleted_by = $1, deleted_reason = $2
+        WHERE id = $3 AND deleted_at IS NULL
+        RETURNING id`,
+      [req.usuario.id, motivo.trim(), viagemId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Viagem não encontrada ou já excluída.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Soft Delete de envio (somente admin) ────────────────────────────────────
+// DELETE /api/admin/envios/:id
+// Body: { motivo: string }
+app.delete('/api/admin/envios/:id', requireAdmin, async (req, res) => {
+  const envioId = parseInt(req.params.id);
+  if (!envioId) return res.status(400).json({ error: 'ID inválido.' });
+
+  const { motivo } = req.body;
+  if (!motivo || !motivo.trim()) {
+    return res.status(400).json({ error: 'O motivo da exclusão é obrigatório.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE envio
+          SET deleted_at = NOW(), deleted_by = $1, deleted_reason = $2
+        WHERE id = $3 AND deleted_at IS NULL
+        RETURNING id`,
+      [req.usuario.id, motivo.trim(), envioId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Envio não encontrado ou já excluído.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Bloqueia DELETE em usuários ─────────────────────────────────────────────
+app.delete('/api/admin/usuarios/:id', requireAdmin, (req, res) => {
+  res.status(405).json({ error: 'Usuários não podem ser excluídos. Use o campo "ativo" para desativar.' });
+});
+
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rota raiz → login
@@ -887,7 +950,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
       JOIN usuario u ON u.id = v.usuario_id
       JOIN cliente c ON c.id = v.cliente_id
       LEFT JOIN servico s ON s.id = v.servico_id
-      WHERE v.id = $1
+      WHERE v.id = $1 AND v.deleted_at IS NULL
       LIMIT 1
     `, [req.params.id]);
 
@@ -909,7 +972,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
       FROM envio en
       LEFT JOIN despesa d ON d.envio_id = en.id
       LEFT JOIN despesa_categoria dc ON dc.id = d.categoria_id
-      WHERE en.viagem_id = $1
+      WHERE en.viagem_id = $1 AND en.deleted_at IS NULL
       ORDER BY en.data_nfs ASC, en.id ASC, d.slot_numero ASC NULLS FIRST
     `, [req.params.id]);
 

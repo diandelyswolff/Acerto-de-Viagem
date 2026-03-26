@@ -268,7 +268,8 @@ function esc(s) {
 
 function fmtDt(v) {
   if (!v) return '—';
-  const d = new Date(v);
+  const normalized = typeof v === 'string' ? v.replace(' ', 'T') : v;
+  const d = new Date(normalized);
   return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 }
 

@@ -721,13 +721,21 @@ function edtSsFilter(key) {
   document.getElementById('ss-' + key).classList.add('open');
 }
 
+let _edtSelecting = false; // evita recursão mútua entre os dois filtros
+
 function edtSsSelect(key, value) {
   document.getElementById(key).value = value;
   document.getElementById(key + '-search').value = value;
   document.getElementById(key + '-search').classList.remove('invalid');
   document.getElementById('ss-' + key).classList.remove('open');
-  if (key === 'vCliente') _edtFiltrarCidades(value);
-  if (key === 'vCidade')  _edtFiltrarClientesPorCidade(value);
+  if (_edtSelecting) return; // evita loop: Cliente→Cidade→Cliente→...
+  _edtSelecting = true;
+  try {
+    if (key === 'vCliente') _edtFiltrarCidades(value);
+    if (key === 'vCidade')  _edtFiltrarClientesPorCidade(value);
+  } finally {
+    _edtSelecting = false;
+  }
 }
 
 function edtSsKeydown(e, key) {

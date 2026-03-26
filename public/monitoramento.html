@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <title>Monitoramento — Acerto de Viagem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #eef1f6; --card: #ffffff; --border: #dde2ea;
+      --accent: #1a56db; --accent-dark: #1648c0; --accent-light: #eff4ff;
+      --text: #1b2537; --muted: #5f738f;
+      --success-bg: #dcfce7; --success-fg: #14803c;
+      --danger-bg: #fff1f1; --danger-fg: #c8000a;
+      --warn-bg: #fef9c3; --warn-fg: #92400e;
+      --radius: 10px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 2.5rem 4rem; }
+
+    /* ── LAYOUT ── */
+    .page { width: 100%; display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; align-items: start; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { grid-column: 1; display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 2rem; }
+    .header-card {
+      background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
+      border-radius: 18px; padding: 1.5rem 1.75rem 1.75rem;
+      box-shadow: 0 4px 24px rgba(26,86,219,0.22);
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .header-top { display: flex; align-items: center; gap: 0.85rem; }
+    .header-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .header-texts h1 { font-size: 1.05rem; font-weight: 700; color: #fff; }
+    .header-texts p  { color: rgba(255,255,255,0.65); font-size: 0.74rem; margin-top: 0.15rem; }
+    .nav-links { display: flex; flex-direction: column; gap: 0.35rem; }
+    .nav-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.85rem; border-radius: 9px; font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.72); text-decoration: none; transition: background 0.15s, color 0.15s; }
+    .nav-link:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .nav-link.active { background: rgba(255,255,255,0.18); color: #fff; }
+    .nav-link svg { flex-shrink: 0; opacity: 0.85; }
+
+    /* ── MAIN ── */
+    .main { grid-column: 2; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* ── PAGE HEADER ── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
+    .page-title { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+    .page-sub   { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      background: var(--card); border-radius: 12px;
+      padding: 0.85rem 1.1rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .filter-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    .filter-btn {
+      padding: 0.38rem 0.9rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700;
+      font-family: 'DM Sans', sans-serif; border: 1.5px solid var(--border);
+      background: #fff; color: var(--muted); cursor: pointer; transition: all 0.13s;
+    }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+    /* ── REGISTRO CARD ── */
+    .registro-card {
+      background: var(--card); border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+      overflow: hidden; transition: box-shadow 0.15s;
+    }
+    .registro-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 6px 20px rgba(0,0,0,0.07); }
+    .registro-card.cascata { opacity: 0.72; }
+
+    .registro-top {
+      display: flex; align-items: center; gap: 0.85rem;
+      padding: 0.9rem 1.25rem 0.75rem;
+    }
+    .tabela-badge {
+      padding: 0.22rem 0.65rem; border-radius: 9999px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; flex-shrink: 0;
+    }
+    .tabela-badge.viagem  { background: #eff4ff; color: var(--accent); }
+    .tabela-badge.envio   { background: #f0fdf4; color: #15803d; }
+    .tabela-badge.despesa { background: var(--warn-bg); color: var(--warn-fg); }
+
+    .cascata-badge {
+      padding: 0.18rem 0.55rem; border-radius: 9999px;
+      font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em;
+      background: #f1f5f9; color: #64748b; flex-shrink: 0;
+    }
+
+    .registro-id { font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+    .registro-desc { font-size: 0.92rem; font-weight: 600; color: var(--text); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .registro-body {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 0; border-top: 1px solid var(--border);
+    }
+    .reg-info {
+      padding: 0.7rem 1.25rem; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 0.15rem;
+    }
+    .reg-info:last-of-type { border-right: none; }
+    .reg-info-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .reg-info-value { font-size: 0.83rem; font-weight: 500; color: var(--text); }
+    .reg-info-value.motivo { color: var(--muted); font-style: italic; word-break: break-word; white-space: normal; }
+
+    .registro-footer {
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 0.65rem 1.25rem; border-top: 1px solid var(--border);
+      background: #fafbfc;
+    }
+    .btn-restaurar {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.42rem 1rem; border-radius: 9999px;
+      font-size: 0.78rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      background: var(--success-bg); color: var(--success-fg);
+      border: 1.5px solid #86efac; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-restaurar:hover:not(:disabled) { background: #bbf7d0; }
+    .btn-restaurar:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* ── MAIS / EMPTY / LOADING ── */
+    .btn-mais {
+      background: var(--card); color: var(--accent); border: 1.5px solid var(--border);
+      border-radius: 9999px; padding: 0.6rem 1.75rem;
+      font-size: 0.82rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: flex; align-items: center; gap: 0.45rem;
+      margin: 0.25rem auto 0; transition: background 0.13s, border-color 0.13s;
+    }
+    .btn-mais:hover { background: var(--accent-light); border-color: var(--accent); }
+    .btn-mais:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .empty-state { background: var(--card); border-radius: 14px; padding: 3.5rem 2rem; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: none; }
+    .empty-state svg { color: var(--muted); opacity: 0.4; margin-bottom: 1rem; }
+    .empty-state h3 { font-size: 1rem; color: var(--text); margin-bottom: 0.4rem; }
+    .empty-state p  { font-size: 0.84rem; color: var(--muted); }
+
+    .loading-wrap { display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 3rem; background: var(--card); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid #dde2ea; border-left-color: var(--accent); animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: #1b2537; color: #fff; padding: 0.75rem 1.25rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.22); transform: translateY(8px); opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 200; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok  { background: #14803c; }
+    .toast.err { background: #c8000a; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="header-card">
+      <div class="header-top">
+        <div class="header-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </div>
+        <div class="header-texts">
+          <h1>Monitoramento</h1>
+          <p id="adminNome">Carregando…</p>
+        </div>
+      </div>
+      <nav class="nav-links">
+        <a href="dashboard.html" class="nav-link">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <a href="usuarios.html" class="nav-link">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Usuários
+        </a>
+        <a href="monitoramento.html" class="nav-link active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Monitoramento
+        </a>
+        <a href="#" class="nav-link" onclick="fazerLogout(); return false;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </a>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Registros excluídos</div>
+        <div class="page-sub">Histórico de exclusões com opção de restauração</div>
+      </div>
+    </div>
+
+    <!-- Filtro por tabela -->
+    <div class="filter-bar">
+      <span class="filter-label">Filtrar por:</span>
+      <button class="filter-btn active" data-filtro="todos" onclick="setFiltro('todos')">Todos</button>
+      <button class="filter-btn" data-filtro="viagem"  onclick="setFiltro('viagem')">Viagens</button>
+      <button class="filter-btn" data-filtro="envio"   onclick="setFiltro('envio')">Envios</button>
+      <button class="filter-btn" data-filtro="despesa" onclick="setFiltro('despesa')">Despesas</button>
+    </div>
+
+    <!-- Lista -->
+    <div id="lista"></div>
+
+    <!-- Loading inicial -->
+    <div id="loadingWrap" class="loading-wrap">
+      <div class="spinner"></div>
+      <span style="font-size:0.88rem;color:var(--muted);">Carregando registros…</span>
+    </div>
+
+    <!-- Estado vazio -->
+    <div id="emptyState" class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      <h3>Nenhum registro excluído</h3>
+      <p>Quando registros forem excluídos, eles aparecerão aqui.</p>
+    </div>
+
+    <!-- Botão carregar mais -->
+    <button id="btnMais" class="btn-mais" style="display:none" onclick="carregarMais()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Carregar mais 10
+    </button>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '/api';
+let _offset   = 0;
+let _filtro   = 'todos';
+let _allRows  = [];   // cache acumulado de todos os registros carregados
+
+function getToken() { return localStorage.getItem('acerto_token') || ''; }
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API_BASE + path, {
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+    ...options,
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    throw new Error(b.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+let _toastTimer;
+function showToast(msg, tipo = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + tipo;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDt(v) {
+  if (!v) return '—';
+  const d = new Date(v);
+  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+// ── FILTRO ─────────────────────────────────────────────────────────────────
+function setFiltro(f) {
+  _filtro = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filtro === f);
+  });
+  renderLista();
+}
+
+function rowsVisiveis() {
+  if (_filtro === 'todos') return _allRows;
+  return _allRows.filter(r => r.tabela === _filtro);
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function tabelaLabel(t) {
+  return { viagem: 'Viagem', envio: 'Envio', despesa: 'Despesa' }[t] || t;
+}
+
+function renderCard(r) {
+  const cascataTag = r.cascata
+    ? `<span class="cascata-badge">Cascata</span>` : '';
+
+  // Texto de ajuda para restauração em cascata
+  let restoreHint = '';
+  if (r.tabela === 'viagem' && !r.cascata)
+    restoreHint = 'Restaura também os envios e despesas em cascata';
+  else if (r.tabela === 'envio' && !r.cascata)
+    restoreHint = 'Restaura também as despesas em cascata';
+
+  return `
+  <div class="registro-card${r.cascata ? ' cascata' : ''}" id="card-${r.tabela}-${r.id}">
+    <div class="registro-top">
+      <span class="tabela-badge ${r.tabela}">${tabelaLabel(r.tabela)}</span>
+      ${cascataTag}
+      <span class="registro-id">#${r.id}</span>
+      <span class="registro-desc" title="${esc(r.descricao)}">${esc(r.descricao)}</span>
+    </div>
+    <div class="registro-body">
+      <div class="reg-info">
+        <span class="reg-info-label">Excluído em</span>
+        <span class="reg-info-value">${fmtDt(r.deleted_at)}</span>
+      </div>
+      <div class="reg-info">
+        <span class="reg-info-label">Excluído por</span>
+        <span class="reg-info-value">${esc(r.deletado_por)}</span>
+      </div>
+      <div class="reg-info">
+        <span class="reg-info-label">Motivo</span>
+        <span class="reg-info-value motivo">${esc(r.motivo)}</span>
+      </div>
+    </div>
+    <div class="registro-footer">
+      ${restoreHint ? `<span style="font-size:0.72rem;color:var(--muted);flex:1;">${restoreHint}</span>` : ''}
+      <button class="btn-restaurar" id="btn-restore-${r.tabela}-${r.id}"
+              onclick="restaurar('${r.tabela}', ${r.id})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+        Restaurar
+      </button>
+    </div>
+  </div>`;
+}
+
+function renderLista() {
+  const rows = rowsVisiveis();
+  const lista = document.getElementById('lista');
+
+  if (!rows.length) {
+    lista.innerHTML = '';
+    document.getElementById('emptyState').style.display = 'block';
+  } else {
+    document.getElementById('emptyState').style.display = 'none';
+    lista.innerHTML = rows.map(renderCard).join('');
+  }
+}
+
+// ── CARREGAR ───────────────────────────────────────────────────────────────
+async function carregar(resetar = false) {
+  if (resetar) { _offset = 0; _allRows = []; }
+
+  document.getElementById('btnMais').disabled = true;
+
+  try {
+    const data = await apiFetch(`/admin/deletados?offset=${_offset}`);
+    _allRows = [..._allRows, ...data.rows];
+    _offset  = _offset + data.rows.length;
+
+    renderLista();
+
+    const btnMais = document.getElementById('btnMais');
+    btnMais.style.display = data.hasMore ? 'flex' : 'none';
+    btnMais.disabled = false;
+  } catch(e) {
+    showToast('Erro ao carregar: ' + e.message, 'err');
+  } finally {
+    document.getElementById('loadingWrap').style.display = 'none';
+  }
+}
+
+function carregarMais() { carregar(false); }
+
+// ── RESTAURAR ──────────────────────────────────────────────────────────────
+async function restaurar(tabela, id) {
+  const btn = document.getElementById(`btn-restore-${tabela}-${id}`);
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg> Restaurando…`;
+
+  try {
+    await apiFetch('/admin/restaurar', {
+      method: 'POST',
+      body: JSON.stringify({ tabela, id }),
+    });
+
+    // Remove o card do DOM e do cache
+    const card = document.getElementById(`card-${tabela}-${id}`);
+    if (card) card.remove();
+    _allRows = _allRows.filter(r => !(r.tabela === tabela && r.id === id));
+
+    // Se era viagem ou envio, remove também os registros cascade do cache e do DOM
+    if (tabela === 'viagem') {
+      _allRows = _allRows.filter(r => {
+        if ((r.tabela === 'envio' || r.tabela === 'despesa') &&
+            r.motivo && r.motivo.startsWith(`Cascata — viagem #${id}`)) {
+          document.getElementById(`card-${r.tabela}-${r.id}`)?.remove();
+          return false;
+        }
+        return true;
+      });
+    } else if (tabela === 'envio') {
+      _allRows = _allRows.filter(r => {
+        if (r.tabela === 'despesa' && r.motivo && r.motivo.startsWith(`Cascata — envio #${id}`)) {
+          document.getElementById(`card-despesa-${r.id}`)?.remove();
+          return false;
+        }
+        return true;
+      });
+    }
+
+    // Mostra empty state se não sobrar nada visível
+    if (!rowsVisiveis().length) {
+      document.getElementById('emptyState').style.display = 'block';
+    }
+
+    showToast(`${tabelaLabel(tabela)} #${id} restaurado com sucesso.`, 'ok');
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Restaurar`;
+    showToast('Erro: ' + e.message, 'err');
+  }
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function fazerLogout() {
+  localStorage.removeItem('acerto_token');
+  window.location.href = 'login.html';
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    if (!getToken()) throw new Error();
+    const me = await apiFetch('/auth/me');
+    if (me.role !== 'admin') { window.location.href = 'index.html'; return; }
+    document.getElementById('adminNome').innerHTML =
+      `${esc(me.nome)} &nbsp;<a href="#" onclick="fazerLogout()" style="color:rgba(255,255,255,0.55);font-size:0.72rem;text-decoration:none;">Sair</a>`;
+  } catch(e) {
+    window.location.href = 'login.html'; return;
+  }
+
+  await carregar(true);
+})();
+</script>
+</body>
+</html>

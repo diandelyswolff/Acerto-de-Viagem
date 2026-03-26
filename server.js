@@ -4,9 +4,15 @@ const path     = require('path');
 const { Pool } = require('pg');
 const cors     = require('cors');
 const bcrypt   = require('bcrypt');
-const jwt = require('jsonwebtoken');
-// fetch nativo disponível no Node 18+; para versões anteriores instale node-fetch
-const fetch = globalThis.fetch ?? require('node-fetch');
+const jwt      = require('jsonwebtoken');
+const multer   = require('multer');
+const { uploadArquivo, buscarOuCriarPastaViagem } = require('./driveUpload');
+
+// multer: armazena arquivos em memória como Buffer (sem escrever em disco)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB por arquivo
+});
 
 const app = express();
 
@@ -207,29 +213,13 @@ app.get('/api/viagens/buscar', requireAuth, async (req, res) => {
 // ─── Vincula (ou re-vincula) a pasta do Drive a uma viagem ───────────────────
 // Dashboard chama POST /api/viagens/:id/vincular-drive
 app.post('/api/viagens/:id/vincular-drive', requireAdmin, async (req, res) => {
-  if (!GAS_UPLOAD_URL) {
-    return res.status(500).json({ error: 'GAS_UPLOAD_URL não configurada no .env' });
-  }
   const viagemId = parseInt(req.params.id);
   try {
-    // Busca (ou cria) a pasta Viagem-{id} no Drive via GAS
-    const gasRes  = await fetch(GAS_UPLOAD_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ viagemId, action: 'buscar_pasta' }),
-    });
-    const rawText = await gasRes.text();
-    let gasData;
-    try { gasData = JSON.parse(rawText); } catch (_) {
-      return res.status(502).json({ error: 'GAS retornou resposta inválida.', gasPreview: rawText.slice(0, 200) });
-    }
-    if (gasData.status !== 'ok' || !gasData.link) {
-      return res.status(502).json({ error: gasData.message || 'GAS não retornou link.' });
-    }
-    await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [gasData.link, viagemId]);
-    res.json({ link: gasData.link });
+    const link = await buscarOuCriarPastaViagem(viagemId);
+    await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [link, viagemId]);
+    res.json({ link });
   } catch (err) {
-    console.error(err);
+    console.error('[vincular-drive]', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -343,23 +333,12 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Garante a pasta da viagem no Drive imediatamente (sem arquivo) e salva o link
-    if (GAS_UPLOAD_URL) {
-      try {
-        const gasRes  = await fetch(GAS_UPLOAD_URL, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
-        });
-        const gasData = await gasRes.json().catch(() => null);
-        if (gasData?.status === 'ok' && gasData.link) {
-          await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [gasData.link, viagemId]);
-        } else {
-          console.warn('Aviso: GAS não retornou link válido ao criar viagem:', gasData);
-        }
-      } catch (e) {
-        console.warn('Aviso: não foi possível criar pasta no Drive:', e.message);
-      }
+    // Garante a pasta da viagem no Drive imediatamente e salva o link
+    try {
+      const link = await buscarOuCriarPastaViagem(viagemId);
+      await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [link, viagemId]);
+    } catch (e) {
+      console.warn('[criar viagem] Não foi possível criar pasta no Drive:', e.message);
     }
 
     res.json({ viagemId });
@@ -372,63 +351,36 @@ app.post('/api/viagens/criar', requireAuth, async (req, res) => {
   }
 });
 
-// ─── Proxy de upload: recebe base64 do HTML e envia ao GAS ───────────────────
-// O navegador não consegue chamar o GAS diretamente por restrições de CORS.
-// O server.js faz a chamada server-side, sem essas restrições.
-// HTML chama POST /api/upload
-const GAS_UPLOAD_URL = process.env.GAS_UPLOAD_URL || '';
+// ─── Upload binário direto para o Google Drive via multer ────────────────────
+// Substitui o antigo proxy base64 → GAS.
+// HTML chama POST /api/upload  (multipart/form-data)
+//
+// Campos esperados no FormData:
+//   arquivo    — File (binário)
+//   viagemId   — número da viagem
+//   dataNFs    — data do envio (yyyy-MM-dd ou dd/MM/yyyy)
+//   categoria  — nome descritivo (cafe, almoco, pedagio, etc.)
+//   slot       — número do slot para categorias multi (ou vazio)
 
-app.post('/api/upload', requireAuth, async (req, res) => {
-  if (!GAS_UPLOAD_URL) {
-    return res.status(500).json({ error: 'GAS_UPLOAD_URL não configurada no .env' });
-  }
-
-  // Valida tamanho do arquivo base64 antes de encaminhar ao GAS.
-  // Base64 representa 3 bytes em 4 caracteres → tamanho_real ≈ length * 0.75
-  const base64 = req.body?.fileData ?? req.body?.base64 ?? '';
-  const estimatedBytes = Math.ceil(base64.length * 0.75);
-  const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-  if (estimatedBytes > MAX_BYTES) {
-    return res.status(413).json({
-      error: 'Arquivo muito grande. O tamanho máximo permitido por upload é 5 MB.',
-    });
-  }
+app.post('/api/upload', requireAuth, upload.single('arquivo'), async (req, res) => {
   try {
-    const response = await fetch(GAS_UPLOAD_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(req.body),
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo recebido.' });
+    }
+
+    const { viagemId, dataNFs, categoria, slot } = req.body;
+    if (!viagemId) return res.status(400).json({ error: 'viagemId obrigatório.' });
+
+    const link = await uploadArquivo(req.file, {
+      viagemId,
+      dataNFs,
+      categoria,
+      slot: slot != null && slot !== '' ? parseInt(slot) : null,
     });
 
-    // Lê o corpo como texto primeiro para diagnóstico — o GAS às vezes
-    // retorna uma página HTML de erro em vez de JSON (ex.: timeout, quota).
-    const rawText = await response.text();
-
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch (_) {
-      // GAS retornou algo que não é JSON (página de erro, HTML, etc.)
-      console.error('GAS retornou resposta não-JSON (status HTTP', response.status, '):\n', rawText.slice(0, 500));
-      return res.status(502).json({
-        error: `GAS retornou resposta inválida (HTTP ${response.status}). Verifique os logs do Apps Script.`,
-        gasPreview: rawText.slice(0, 200),
-      });
-    }
-
-    if (data.status !== 'ok') {
-      console.error('GAS retornou status de erro:', data);
-      throw new Error(data.message || `GAS status: ${data.status}`);
-    }
-
-    if (!data.link) {
-      console.error('GAS retornou status ok mas sem link:', data);
-      throw new Error('GAS não retornou o link do arquivo.');
-    }
-
-    res.json({ link: data.link });
+    res.json({ link });
   } catch (err) {
-    console.error('Erro no upload para o Drive:', err.message);
+    console.error('[/api/upload]', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -533,19 +485,12 @@ app.post('/api/acertos', requireAuth, async (req, res) => {
     await client.query('COMMIT');
 
     // Para viagens novas criadas inline, tenta criar pasta no Drive e salvar link
-    if (!b.viagemId && GAS_UPLOAD_URL) {
+    if (!b.viagemId) {
       try {
-        const gasRes  = await fetch(GAS_UPLOAD_URL, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ viagemId, dataNFs: b.dataInicio }),
-        });
-        const gasData = await gasRes.json().catch(() => null);
-        if (gasData?.status === 'ok' && gasData.link) {
-          await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [gasData.link, viagemId]);
-        }
+        const link = await buscarOuCriarPastaViagem(viagemId);
+        await pool.query('UPDATE viagem SET link_pasta = $1 WHERE id = $2', [link, viagemId]);
       } catch (e) {
-        console.warn('Aviso: não foi possível criar pasta no Drive (acertos):', e.message);
+        console.warn('[acertos] Não foi possível criar pasta no Drive:', e.message);
       }
     }
 

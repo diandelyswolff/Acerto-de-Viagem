@@ -2073,14 +2073,48 @@ function comprimirImagem(file, { maxPx = 1280, quality = 0.72 } = {}) {
   });
 }
 
-// Envia um arquivo ao server.js, que repassa ao GAS server-side (sem CORS).
-// Comprime a imagem antes de converter para base64, reduzindo drasticamente o tamanho.
-async function uploadParaDrive({ file, viagemId, dataNFs, categoria, slot = null }) {
-  const b64 = await comprimirImagem(file);
-  const result = await apiFetch('/upload', {
-    method: 'POST',
-    body: JSON.stringify({ viagemId, dataNFs, categoria, slot, arquivo: b64 }),
+// Comprime a imagem via canvas e devolve um Blob pronto para FormData.
+// PDFs e arquivos não-imagem passam sem alteração.
+function comprimirImagemBlob(file, { maxPx = 1280, quality = 0.72 } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width >= height) { height = Math.round(height * maxPx / width); width = maxPx; }
+        else                 { width  = Math.round(width  * maxPx / height); height = maxPx; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('canvas.toBlob falhou')), 'image/jpeg', quality);
+    };
+    img.onerror = reject;
+    img.src = url;
   });
+}
+
+// Envia o arquivo como multipart/form-data (binário puro, sem base64).
+async function uploadParaDrive({ file, viagemId, dataNFs, categoria, slot = null }) {
+  const blob = await comprimirImagemBlob(file);
+  const fd = new FormData();
+  fd.append('arquivo', blob, file.name);
+  fd.append('viagemId',  String(viagemId));
+  fd.append('dataNFs',   dataNFs  || '');
+  fd.append('categoria', categoria || '');
+  if (slot != null) fd.append('slot', String(slot));
+
+  const token = localStorage.getItem('acerto_token');
+  const resp = await fetch('/api/upload', {
+    method: 'POST',
+    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+    body: fd,
+  });
+  const result = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(result.error || 'Erro no upload');
   if (!result.link) throw new Error('Upload não retornou link');
   return result.link;
 }

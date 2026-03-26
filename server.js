@@ -858,7 +858,7 @@ app.patch('/api/admin/envios/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// ─── Soft Delete de viagem (somente admin) ───────────────────────────────────
+// ─── Soft Delete de viagem (somente admin) — cascata para envios ─────────────
 // DELETE /api/admin/viagens/:id
 // Body: { motivo: string }
 app.delete('/api/admin/viagens/:id', requireAdmin, async (req, res) => {
@@ -870,19 +870,39 @@ app.delete('/api/admin/viagens/:id', requireAdmin, async (req, res) => {
     return res.status(400).json({ error: 'O motivo da exclusão é obrigatório.' });
   }
 
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
+    await client.query('BEGIN');
+
+    // Soft delete da viagem
+    const { rows } = await client.query(
       `UPDATE viagem
           SET deleted_at = NOW(), deleted_by = $1, deleted_reason = $2
         WHERE id = $3 AND deleted_at IS NULL
         RETURNING id`,
       [req.usuario.id, motivo.trim(), viagemId]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Viagem não encontrada ou já excluída.' });
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Viagem não encontrada ou já excluída.' });
+    }
+
+    // Cascata: soft delete em todos os envios da viagem
+    await client.query(
+      `UPDATE envio
+          SET deleted_at = NOW(), deleted_by = $1, deleted_reason = $2
+        WHERE viagem_id = $3 AND deleted_at IS NULL`,
+      [req.usuario.id, `Cascata — viagem #${viagemId} excluída. Motivo: ${motivo.trim()}`, viagemId]
+    );
+
+    await client.query('COMMIT');
     res.json({ ok: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -914,6 +934,80 @@ app.delete('/api/admin/envios/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ─── Exclui uma despesa (somente admin) ──────────────────────────────────────
+// DELETE /api/admin/despesas/:id  — exclusão física (despesas não têm soft delete)
+app.delete('/api/admin/despesas/:id', requireAdmin, async (req, res) => {
+  const despesaId = parseInt(req.params.id);
+  if (!despesaId) return res.status(400).json({ error: 'ID inválido.' });
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM despesa WHERE id = $1 RETURNING id',
+      [despesaId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Despesa não encontrada.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Adiciona uma despesa a um envio existente (somente admin) ────────────────
+// POST /api/admin/envios/:id/despesas
+// Body: { categoria: string, valor: number, pagamento: string, slot?: number }
+app.post('/api/admin/envios/:id/despesas', requireAdmin, async (req, res) => {
+  const envioId = parseInt(req.params.id);
+  if (!envioId) return res.status(400).json({ error: 'ID inválido.' });
+
+  const { categoria, valor, pagamento } = req.body;
+  if (!categoria) return res.status(400).json({ error: 'Categoria obrigatória.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Verifica se o envio existe e não está deletado
+    const { rows: envRows } = await client.query(
+      'SELECT id FROM envio WHERE id = $1 AND deleted_at IS NULL',
+      [envioId]
+    );
+    if (!envRows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Envio não encontrado.' });
+    }
+
+    const catId = await findOrCreateCategoria(client, categoria.toLowerCase());
+
+    // Para categorias multi, determina o próximo slot disponível se não informado
+    const MULTI = ['pedagio', 'combustivel', 'outros'];
+    let slot = req.body.slot ? parseInt(req.body.slot) : null;
+    if (MULTI.includes(categoria.toLowerCase()) && !slot) {
+      const { rows: slotRows } = await client.query(
+        `SELECT COALESCE(MAX(slot_numero), 0) + 1 AS next_slot
+           FROM despesa
+          WHERE envio_id = $1 AND categoria_id = $2`,
+        [envioId, catId]
+      );
+      slot = Math.min(slotRows[0].next_slot, 15);
+    }
+
+    const { rows: [nova] } = await client.query(
+      `INSERT INTO despesa (envio_id, categoria_id, valor, pagamento, slot_numero)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [envioId, catId, parseFloat(valor) || 0, pagamento || '', slot]
+    );
+
+    await client.query('COMMIT');
+    res.status(201).json({ id: nova.id, slot });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // ─── Bloqueia DELETE em usuários ─────────────────────────────────────────────
 app.delete('/api/admin/usuarios/:id', requireAdmin, (req, res) => {
   res.status(405).json({ error: 'Usuários não podem ser excluídos. Use o campo "ativo" para desativar.' });
@@ -942,7 +1036,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
         (
           SELECT en2.equipamento
           FROM envio en2
-          WHERE en2.viagem_id = v.id AND en2.equipamento IS NOT NULL
+          WHERE en2.viagem_id = v.id AND en2.equipamento IS NOT NULL AND en2.deleted_at IS NULL
           ORDER BY en2.id DESC
           LIMIT 1
         ) AS equipamento
@@ -966,6 +1060,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
         en.timestamp,
         dc.nome AS categoria,
         dc.tipo_despesa AS tipo,
+        d.id AS despesa_id,
         d.valor,
         d.pagamento,
         d.slot_numero AS slot
@@ -991,7 +1086,7 @@ app.get('/api/viagens/:id/resumo', requireAdmin, async (req, res) => {
       }
       if (!row.categoria) continue;
       const cat = row.categoria.toLowerCase();
-      const entry = { valor: parseFloat(row.valor) || 0, pagamento: row.pagamento || '' };
+      const entry = { id: row.despesa_id, valor: parseFloat(row.valor) || 0, pagamento: row.pagamento || '' };
       if (['cafe','almoco','janta','hotel'].includes(cat)) {
         enviosMap[row.envio_id].despesas[cat] = entry;
       } else if (['pedagio','combustivel','outros'].includes(cat)) {

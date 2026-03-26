@@ -1040,6 +1040,160 @@ app.post('/api/admin/envios/:id/despesas', requireAdmin, async (req, res) => {
   }
 });
 
+// ─── Monitoramento: lista registros deletados (paginado) ─────────────────────
+// GET /api/admin/deletados?offset=0
+// Retorna os últimos registros deletados em viagem, envio e despesa, mesclados
+// e ordenados por deleted_at DESC. Cascade entries ficam identificadas.
+app.get('/api/admin/deletados', requireAdmin, async (req, res) => {
+  const limit  = 10;
+  const offset = Math.max(0, parseInt(req.query.offset) || 0);
+
+  try {
+    const { rows } = await pool.query(`
+      SELECT * FROM (
+        -- Viagens deletadas
+        SELECT
+          'viagem'            AS tabela,
+          v.id,
+          v.deleted_at,
+          v.deleted_reason    AS motivo,
+          v.deleted_reason LIKE 'Cascata%' AS cascata,
+          adm.nome            AS deletado_por,
+          u.nome || ' → ' || c.nome || ' (' || COALESCE(c.cidade,'') || ')' AS descricao,
+          NULL::INTEGER       AS pai_id,
+          NULL::TEXT          AS pai_tabela
+        FROM viagem v
+        JOIN usuario adm ON adm.id = v.deleted_by
+        JOIN usuario u   ON u.id   = v.usuario_id
+        JOIN cliente c   ON c.id   = v.cliente_id
+        WHERE v.deleted_at IS NOT NULL
+
+        UNION ALL
+
+        -- Envios deletados
+        SELECT
+          'envio'             AS tabela,
+          en.id,
+          en.deleted_at,
+          en.deleted_reason   AS motivo,
+          en.deleted_reason LIKE 'Cascata%' AS cascata,
+          adm.nome            AS deletado_por,
+          'Envio #' || en.id || ' da Viagem #' || en.viagem_id AS descricao,
+          en.viagem_id        AS pai_id,
+          'viagem'            AS pai_tabela
+        FROM envio en
+        JOIN usuario adm ON adm.id = en.deleted_by
+        WHERE en.deleted_at IS NOT NULL
+
+        UNION ALL
+
+        -- Despesas deletadas
+        SELECT
+          'despesa'           AS tabela,
+          d.id,
+          d.deleted_at,
+          d.deleted_reason    AS motivo,
+          d.deleted_reason LIKE 'Cascata%' AS cascata,
+          adm.nome            AS deletado_por,
+          dc.nome || ' — R$ ' || TO_CHAR(d.valor,'FM9999990.00') || ' (Envio #' || d.envio_id || ')' AS descricao,
+          d.envio_id          AS pai_id,
+          'envio'             AS pai_tabela
+        FROM despesa d
+        JOIN usuario adm          ON adm.id = d.deleted_by
+        JOIN despesa_categoria dc ON dc.id  = d.categoria_id
+        WHERE d.deleted_at IS NOT NULL
+      ) t
+      ORDER BY deleted_at DESC
+      LIMIT $1 OFFSET $2
+    `, [limit + 1, offset]);
+
+    const hasMore = rows.length > limit;
+    if (hasMore) rows.pop();
+    res.json({ rows, hasMore, offset });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Restauração de registro deletado (somente admin) ────────────────────────
+// POST /api/admin/restaurar
+// Body: { tabela: 'viagem'|'envio'|'despesa', id: number }
+// Cascade: viagem restaura seus envios e despesas; envio restaura suas despesas.
+// Apenas registros que foram cascade-deletados junto ao pai são restaurados.
+app.post('/api/admin/restaurar', requireAdmin, async (req, res) => {
+  const { tabela, id } = req.body;
+  if (!['viagem','envio','despesa'].includes(tabela)) {
+    return res.status(400).json({ error: 'Tabela inválida.' });
+  }
+  const recId = parseInt(id);
+  if (!recId) return res.status(400).json({ error: 'ID inválido.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (tabela === 'viagem') {
+      // Restaura a viagem
+      const { rows } = await client.query(
+        `UPDATE viagem SET deleted_at = NULL, deleted_by = NULL, deleted_reason = NULL
+          WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id`,
+        [recId]
+      );
+      if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Registro não encontrado.' }); }
+
+      // Restaura envios que foram cascade-deletados junto a esta viagem
+      await client.query(
+        `UPDATE envio SET deleted_at = NULL, deleted_by = NULL, deleted_reason = NULL
+          WHERE viagem_id = $1 AND deleted_reason LIKE $2`,
+        [recId, `Cascata — viagem #${recId}%`]
+      );
+
+      // Restaura despesas dos envios dessa viagem que foram cascade-deletadas
+      await client.query(
+        `UPDATE despesa SET deleted_at = NULL, deleted_by = NULL, deleted_reason = NULL
+          WHERE envio_id IN (SELECT id FROM envio WHERE viagem_id = $1)
+            AND deleted_reason LIKE $2`,
+        [recId, `Cascata — viagem #${recId}%`]
+      );
+
+    } else if (tabela === 'envio') {
+      // Restaura o envio
+      const { rows } = await client.query(
+        `UPDATE envio SET deleted_at = NULL, deleted_by = NULL, deleted_reason = NULL
+          WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id`,
+        [recId]
+      );
+      if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Registro não encontrado.' }); }
+
+      // Restaura despesas que foram cascade-deletadas junto a este envio
+      await client.query(
+        `UPDATE despesa SET deleted_at = NULL, deleted_by = NULL, deleted_reason = NULL
+          WHERE envio_id = $1 AND deleted_reason LIKE $2`,
+        [recId, `Cascata — envio #${recId}%`]
+      );
+
+    } else {
+      // despesa — restauração direta
+      const { rows } = await client.query(
+        `UPDATE despesa SET deleted_at = NULL, deleted_by = NULL, deleted_reason = NULL
+          WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id`,
+        [recId]
+      );
+      if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Registro não encontrado.' }); }
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // ─── Bloqueia DELETE em usuários ─────────────────────────────────────────────
 app.delete('/api/admin/usuarios/:id', requireAdmin, (req, res) => {
   res.status(405).json({ error: 'Usuários não podem ser excluídos. Use o campo "ativo" para desativar.' });

@@ -569,9 +569,92 @@
       .sig-actions .btn-clear { order: 2; text-align: center; padding: 0.5rem 0; }
       .sig-actions .check-label { order: 1; }
     }
-  </style>
+  
+    /* ── ADMIN NAV (visível apenas para admins) ── */
+    .admin-nav {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 1.25rem;
+      transform: translateY(-50%);
+      z-index: 999;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .admin-nav.visible { display: flex; }
+    .admin-nav-card {
+      background: linear-gradient(135deg, #1a56db 0%, #1040be 100%);
+      border-radius: 14px;
+      padding: 0.75rem 0.6rem;
+      box-shadow: 0 4px 20px rgba(26,86,219,0.28);
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      align-items: center;
+    }
+    .admin-nav-sep { height: 1px; background: rgba(255,255,255,0.2); width: 100%; margin: 0.15rem 0; }
+    .admin-nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 9px;
+      color: rgba(255,255,255,0.72);
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+      position: relative;
+    }
+    .admin-nav-link:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    .admin-nav-link.active { background: rgba(255,255,255,0.2); color: #fff; }
+    .admin-nav-link svg { flex-shrink: 0; }
+    .admin-nav-link .nav-tooltip {
+      position: absolute;
+      left: calc(100% + 10px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: #1b2537;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .admin-nav-link:hover .nav-tooltip { opacity: 1; }
+    @media (max-width: 900px) { .admin-nav { display: none !important; } }
+
+</style>
 </head>
 <body>
+
+<!-- ── ADMIN NAV ── -->
+<nav class="admin-nav" id="adminNav">
+  <div class="admin-nav-card">
+    <a href="dashboard.html" class="admin-nav-link" title="Dashboard">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span class="nav-tooltip">Dashboard</span>
+    </a>
+    <a href="usuarios.html" class="admin-nav-link" title="Usuários">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-tooltip">Usuários</span>
+    </a>
+    <a href="monitoramento.html" class="admin-nav-link" title="Monitoramento">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-tooltip">Monitoramento</span>
+    </a>
+    <div class="admin-nav-sep"></div>
+    <a href="index.html" class="admin-nav-link active" title="Formulário">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="nav-tooltip">Formulário</span>
+    </a>
+  </div>
+</nav>
+
+
 
 <div class="loading-overlay" id="loadingOverlay"><div class="loading-inner"><div class="spinner"></div><div id="loadingMsg"></div></div></div>
 
@@ -941,6 +1024,11 @@ window.addEventListener('load', async () => {
     const headerP = document.querySelector('.card-header p');
     if (headerP) headerP.innerHTML =
       `Olá, <strong style="color:#fff">${me.nome}</strong> &nbsp;·&nbsp; <a href="#" onclick="fazerLogout()" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.78rem;">Sair</a>`;
+    // Exibe menu de navegação para admins
+    if (me.role === 'admin') {
+      const adminNav = document.getElementById('adminNav');
+      if (adminNav) adminNav.classList.add('visible');
+    }
 
     // Descarta o rascunho se pertencer a outro usuário
     const draft = _lerDraft();

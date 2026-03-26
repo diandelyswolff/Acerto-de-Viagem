@@ -859,9 +859,11 @@ async function confirmarDelete() {
   }
 }
 
-// Fecha modal ao clicar no overlay
-document.getElementById('sdOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('sdOverlay')) fecharModalDelete();
+// Fecha modal ao clicar no overlay (elemento está após este script, aguarda DOM)
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('sdOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('sdOverlay')) fecharModalDelete();
+  });
 });
 
 async function fazerLogout() {

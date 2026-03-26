@@ -116,6 +116,39 @@
     .pag-pix  { border-color: #fde68a; background: var(--pix-bg); color: var(--pix-fg); }
     .pag-corp { border-color: #93c5fd; background: var(--corp-bg); color: var(--corp-fg); }
 
+    /* ── AÇÕES DE DESPESA ── */
+    .despesa-row.simples { grid-template-columns: 120px 120px 160px 32px; }
+    .despesa-row.multi   { grid-template-columns: 24px 100px 120px 160px 32px; }
+    .btn-del-despesa {
+      width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid #fca5a5;
+      background: #fff5f5; color: #dc2626; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .btn-del-despesa:hover { background: #fee2e2; }
+
+    /* ── NOVA DESPESA ── */
+    .nova-despesa-wrap {
+      margin-top: 1rem; border-top: 1.5px dashed var(--border); padding-top: 0.9rem;
+    }
+    .nova-despesa-label {
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem;
+    }
+    .nova-despesa-row {
+      display: grid; grid-template-columns: 160px 110px 170px auto;
+      gap: 0.55rem; align-items: end;
+    }
+    .btn-add-despesa {
+      background: var(--accent); color: #fff; border: none;
+      padding: 0.44rem 0.9rem; border-radius: 8px; font-size: 0.8rem;
+      font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+      transition: background 0.15s; white-space: nowrap; height: 36px;
+    }
+    .btn-add-despesa:hover { background: var(--accent-dark); }
+    .btn-add-despesa:disabled { opacity: 0.55; cursor: not-allowed; }
+
     /* ── TOAST ── */
     .toast { position: fixed; bottom: 2rem; right: 2rem; background: #1b2537; color: #fff; padding: 0.75rem 1.25rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.22); transform: translateY(8px); opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 200; }
     .toast.show { opacity: 1; transform: translateY(0); }
@@ -318,31 +351,37 @@ function renderEnvios(envios) {
     const simplesRows = SIMPLES.map(cat => {
       const v = d[cat];
       if (!v) return '';
-      return `<div class="despesa-row simples">
+      return `<div class="despesa-row simples" id="despesa-row-${v.id}">
         <span class="despesa-cat">${LABEL[cat]}</span>
         <input class="despesa-input" type="number" min="0" step="0.01"
                data-envio="${en.envioId}" data-cat="${cat}" data-tipo="simples"
                value="${v.valor.toFixed(2)}" placeholder="0,00">
         ${pagSelect(`pag_${en.envioId}_${cat}`, v.pagamento)}
+        <button class="btn-del-despesa" onclick="deletarDespesa(${v.id}, ${en.envioId})" title="Excluir despesa">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>
       </div>`;
     }).join('');
 
     const multiRows = MULTI.flatMap(cat =>
       (d[cat] || []).map(slot => `
-        <div class="despesa-row multi">
+        <div class="despesa-row multi" id="despesa-row-${slot.id}">
           <span class="despesa-slot">#${slot.slot}</span>
           <span class="despesa-cat">${LABEL[cat]}</span>
           <input class="despesa-input" type="number" min="0" step="0.01"
                  data-envio="${en.envioId}" data-cat="${cat}" data-slot="${slot.slot}" data-tipo="multi"
                  value="${slot.valor.toFixed(2)}" placeholder="0,00">
           ${pagSelect(`pag_${en.envioId}_${cat}_${slot.slot}`, slot.pagamento)}
+          <button class="btn-del-despesa" onclick="deletarDespesa(${slot.id}, ${en.envioId})" title="Excluir despesa">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </button>
         </div>`)
     ).join('');
 
     const temDespesas = simplesRows || multiRows;
 
     return `
-    <div class="section-card">
+    <div class="section-card" id="envio-card-${en.envioId}">
       <div class="section-header">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Envio
@@ -367,12 +406,51 @@ function renderEnvios(envios) {
           </div>
         </div>
 
-        ${temDespesas ? `
         <div style="margin-top:0.75rem;">
           <div class="despesas-label">Despesas</div>
-          ${simplesRows}
-          ${multiRows}
-        </div>` : ''}
+          <div id="despesas-list-${en.envioId}">
+            ${simplesRows}${multiRows}
+            ${!temDespesas ? '<div style="font-size:0.8rem;color:var(--muted);padding:0.4rem 0;">Nenhuma despesa registrada.</div>' : ''}
+          </div>
+
+          <!-- ── Nova despesa ── -->
+          <div class="nova-despesa-wrap">
+            <div class="nova-despesa-label">Adicionar despesa</div>
+            <div class="nova-despesa-row">
+              <div class="field" style="margin:0;">
+                <label>Categoria</label>
+                <select class="pag-select" id="novaCat_${en.envioId}">
+                  <option value="">— selecione —</option>
+                  <option value="cafe">Café</option>
+                  <option value="almoco">Almoço</option>
+                  <option value="janta">Janta</option>
+                  <option value="hotel">Hotel</option>
+                  <option value="pedagio">Pedágio</option>
+                  <option value="combustivel">Combustível</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Valor (R$)</label>
+                <input class="despesa-input" type="number" min="0" step="0.01"
+                       id="novaValor_${en.envioId}" placeholder="0,00">
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Pagamento</label>
+                <select class="pag-select" id="novaPag_${en.envioId}" onchange="onPagChange(this)">
+                  <option value="">— pagamento —</option>
+                  <option value="dinheiro_pix">Dinheiro / Pix</option>
+                  <option value="cartao_corp">Cartão corporativo</option>
+                </select>
+              </div>
+              <button class="btn-add-despesa" id="btnAddDespesa_${en.envioId}"
+                      onclick="adicionarDespesa(${en.envioId})">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div class="save-row">
           <button class="btn-salvar" onclick="salvarEnvio(${en.envioId}, this)">
@@ -382,6 +460,90 @@ function renderEnvios(envios) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── GERENCIAR DESPESAS ─────────────────────────────────────────────────────
+
+async function deletarDespesa(despesaId, envioId) {
+  if (!confirm(`Excluir esta despesa do envio #${envioId}? Esta ação é irreversível.`)) return;
+  try {
+    await apiFetch(`/admin/despesas/${despesaId}`, { method: 'DELETE' });
+    // Remove a linha do DOM imediatamente, sem recarregar a página
+    const row = document.getElementById(`despesa-row-${despesaId}`);
+    if (row) row.remove();
+    showToast('Despesa excluída.', 'ok');
+  } catch(e) {
+    showToast(e.message, 'err');
+  }
+}
+
+async function adicionarDespesa(envioId) {
+  const catEl  = document.getElementById(`novaCat_${envioId}`);
+  const valEl  = document.getElementById(`novaValor_${envioId}`);
+  const pagEl  = document.getElementById(`novaPag_${envioId}`);
+  const btn    = document.getElementById(`btnAddDespesa_${envioId}`);
+
+  const categoria = catEl.value;
+  const valor     = parseFloat(valEl.value) || 0;
+  const pagamento = pagEl.value;
+
+  if (!categoria) { showToast('Selecione uma categoria.', 'err'); catEl.focus(); return; }
+
+  btn.disabled = true; btn.textContent = 'Adicionando…';
+  try {
+    const result = await apiFetch(`/admin/envios/${envioId}/despesas`, {
+      method: 'POST',
+      body: JSON.stringify({ categoria, valor, pagamento }),
+    });
+
+    showToast('Despesa adicionada.', 'ok');
+
+    // Limpa os campos
+    catEl.value = ''; valEl.value = ''; pagEl.value = ''; pagEl.className = 'pag-select';
+
+    // Injeta a nova linha no DOM sem recarregar
+    const MULTI = ['pedagio', 'combustivel', 'outros'];
+    const LABEL = { cafe:'Café', almoco:'Almoço', janta:'Janta', hotel:'Hotel', pedagio:'Pedágio', combustivel:'Combustível', outros:'Outros' };
+    const lista = document.getElementById(`despesas-list-${envioId}`);
+    // Remove o aviso de "nenhuma despesa" se existir
+    const vazio = lista.querySelector('[style*="Nenhuma despesa"]');
+    if (vazio) vazio.remove();
+
+    const novaId = result.id;
+    const div = document.createElement('div');
+    if (MULTI.includes(categoria)) {
+      div.className = 'despesa-row multi';
+      div.id = `despesa-row-${novaId}`;
+      div.innerHTML = `
+        <span class="despesa-slot">#${result.slot}</span>
+        <span class="despesa-cat">${LABEL[categoria]}</span>
+        <input class="despesa-input" type="number" min="0" step="0.01"
+               data-envio="${envioId}" data-cat="${categoria}" data-slot="${result.slot}" data-tipo="multi"
+               value="${valor.toFixed(2)}" placeholder="0,00">
+        ${pagSelect(`pag_${envioId}_${categoria}_${result.slot}`, pagamento)}
+        <button class="btn-del-despesa" onclick="deletarDespesa(${novaId}, ${envioId})" title="Excluir despesa">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>`;
+    } else {
+      div.className = 'despesa-row simples';
+      div.id = `despesa-row-${novaId}`;
+      div.innerHTML = `
+        <span class="despesa-cat">${LABEL[categoria]}</span>
+        <input class="despesa-input" type="number" min="0" step="0.01"
+               data-envio="${envioId}" data-cat="${categoria}" data-tipo="simples"
+               value="${valor.toFixed(2)}" placeholder="0,00">
+        ${pagSelect(`pag_${envioId}_${categoria}`, pagamento)}
+        <button class="btn-del-despesa" onclick="deletarDespesa(${novaId}, ${envioId})" title="Excluir despesa">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>`;
+    }
+    lista.appendChild(div);
+  } catch(e) {
+    showToast(e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar`;
+  }
 }
 
 // ── SAVE HANDLERS ──────────────────────────────────────────────────────────
